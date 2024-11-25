@@ -1,0 +1,21 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.python-version
+
+# Package locks
+uv.lock
+
+# Node modules
+node_modules
+
+# Environment variables
+.env*
+!.env.example
+multinear.db
