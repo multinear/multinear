@@ -79,3 +79,6 @@ class OutputCapture:
         # Remove the log handler
         if self._log_handler:
             logging.getLogger().removeHandler(self._log_handler)
+
+    def isatty(self):
+        return True
