@@ -1,5 +1,7 @@
-recursive-include multinear/frontend *
-global-exclude node_modules/*
+prune **/node_modules
+prune **/__pycache__
+recursive-include multinear/frontend/build *
+global-exclude node_modules
 global-exclude .env
 global-exclude *.pyc
 global-exclude __pycache__

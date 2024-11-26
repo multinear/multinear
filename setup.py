@@ -11,7 +11,14 @@ setup(
         ],
     },
     install_requires=[
-        # Any dependencies your package has
+        'autoevals>=0.0.105',
+        'fastapi[standard]>=0.115.4',
+        'jinja2>=3.1.4',
+        'openai>=1.55.0',
+        'rich>=13.9.4',
+        'sqlalchemy>=2.0.36',
+        'tqdm>=4.67.0',
+        'uvicorn[standard]>=0.32.0',
     ],
     author='Dima Kuchin',
     author_email='dima@mirable.io',
@@ -27,10 +34,8 @@ setup(
     python_requires='>=3.8',
     package_data={
         'multinear': [
-            'frontend/*',
-            'frontend/**/*',
-            '!frontend/node_modules/**/*',  # Exclude node_modules
-            '!frontend/.env',  # Exclude .env
+            'frontend/build/*',
+            'frontend/build/**/*',
         ],
     },
 )
