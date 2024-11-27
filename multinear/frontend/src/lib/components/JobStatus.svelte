@@ -15,7 +15,7 @@
         </div>
         {#if $jobStore.jobDetails}
             <div class="mt-2">
-                {#if !$jobStore.jobDetails.task_status_map || Object.keys($jobStore.jobDetails.task_status_map).length === 0}
+                {#if (!$jobStore.jobDetails.task_status_map || Object.keys($jobStore.jobDetails.task_status_map).length === 0) && !$jobStore.jobStatus}
                     <Alert.Root variant="destructive" class="mt-2">
                         <AlertCircle class="h-4 w-4" />
                         <Alert.Title>Experiment Failed</Alert.Title>

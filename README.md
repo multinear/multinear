@@ -1,83 +1,53 @@
-# Multinear: A Platform for Developing and Testing GenAI Applications
+# Multinear: Reliable GenAI Applications
 
-Multinear is a platform designed to aid in the development of Generative AI applications by running experiments, measuring results, and providing insights. It allows developers to run their GenAI-powered workflows with various configurations, collect metadata, and analyze outcomes to build reliable and robust applications.
+Developing reliable applications powered by Generative AI presents unique challenges. The unpredictable nature of LLMs often leads to inconsistent outputs, regressions, and unforeseen behaviors, especially when iterating on prompts, models, and datasets. **Multinear** is a platform designed to help you navigate these challenges by providing a systematic way to run experiments, measure results, and gain insights, ensuring your GenAI applications are robust and trustworthy.
 
-## Table of Contents
+![Project Overview](static/project.png)
 
-- [Features](#features)
-- [Getting Started](#getting-started)
-  - [Installation](#installation)
-  - [Project Initialization](#project-initialization)
-  - [Running the Platform](#running-the-platform)
-- [Usage](#usage)
-  - [Defining Your Task Runner](#defining-your-task-runner)
-  - [Configuring Tasks and Evaluations](#configuring-tasks-and-evaluations)
-  - [Running Experiments](#running-experiments)
-- [Analyzing Results](#analyzing-results)
-- [Architecture](#architecture)
-- [Contributing](#contributing)
-- [License](#license)
+## Why Multinear?
 
-## Features
+- **End-to-End Evaluation**: Assess the full spectrum of your GenAI application — from inputs to outputs — capturing the interactions between models, prompts, datasets, and business logic.
+- **Experimentation Made Easy**: Run experiments with various configurations effortlessly. Test different models, tweak prompts, adjust datasets, and modify your code to find the optimal setup.
+- **Regression Detection**: Identify when new changes negatively impact previously successful cases. Multinear tracks regressions so you can maintain and improve application reliability over time.
+- **Comprehensive Evaluation Methods**: Use a range of evaluation strategies, including strict output comparisons, LLM-as-a-judge assessments, and human evaluations, to ensure your application meets quality standards.
+- **Insightful Analytics**: Compare results across different runs to understand the impact of changes. Visualize performance trends and make data-driven decisions to enhance your application.
+- **Guardrail Testing**: Strengthen your application against malicious inputs, security threats, and safety concerns by evaluating it under challenging scenarios.
 
-- **Experiment Workflow**: Run experiments with different configurations of models, prompts, datasets, and business logic.
-- **Result Tracking**: Automatically saves metadata and results of each experiment for analysis.
-- **Regression Detection**: Identify regressions when new changes impact previously working cases.
-- **Evaluation Framework**: Supports various evaluation methods including direct comparison, LLM-as-a-judge, and human evaluation.
-- **Comprehensive Insights**: Compare results across runs, visualize performance trends, and understand the impact of changes.
-- **Security Testing**: Evaluate your application against malicious inputs, guardrails, and safety measures.
+## Project Initialization
 
-## Getting Started
-
-### Installation
-
-To install Multinear and its dependencies, run:
+Initialize a new Multinear project in your project folder:
 
 ```bash
-git clone https://github.com/multinear/multinear.git
-cd multinear
-make install
-```
-
-This will install the required Python packages.
-
-### Project Initialization
-
-Initialize a new Multinear project in your desired directory:
-
-```bash
+pip install multinear
 multinear init
 ```
 
-You will be prompted to enter your project details:
+You'll be prompted to enter your project details:
 
-- **Project name**: The name of your project.
-- **Project ID**: A URL-friendly identifier for your project (default provided).
-- **Project description**: A brief description of your project.
+- **Project Name**: A descriptive name for your project.
+- **Project ID**: A URL-friendly identifier (default provided).
+- **Project Description**: A brief summary of your project's purpose.
 
-This command creates a `.multinear` directory containing your project configuration.
+This command creates a `.multinear` folder containing your project configuration and an SQLite database for experiment results. It's recommended to commit this folder alongside your code to keep track of your evaluations.
 
-### Running the Platform
+## Running the Platform
 
-Start the Multinear web server:
+Start the Multinear web server to access the interactive frontend:
 
 ```bash
 multinear web
 ```
+Access the platform at `http://127.0.0.1:8000` in your browser.
 
-By default, the server runs on `http://127.0.0.1:8000`. You can access the frontend interface in your browser to interact with the platform.
-
-For development mode with auto-reload on file changes:
+For development mode with auto-reload on file changes, use:
 
 ```bash
 multinear web_dev
 ```
 
-## Usage
-
 ### Defining Your Task Runner
 
-Create a `task_runner.py` in the `.multinear` directory of your project. This file defines the `run_task(input)` function, which contains the logic for processing each task.
+Create a `task_runner.py` in the `.multinear` folder of your project. This file defines the `run_task(input)` function, which contains the logic for processing each task using your GenAI application.
 
 Example `task_runner.py`:
 
@@ -104,21 +74,40 @@ project:
 tasks:
   - id: task1
     input: "Input data for task 1"
-    min_score: 0.8
     checklist:
       - "The output should be in English."
       - "The response should be polite."
+    min_score: 0.8
   - id: task2
     input: "Input data for task 2"
-    min_score: 1.0
     checklist:
       - "The output should include at least two examples."
       - "The response should be less than 500 words."
+    min_score: 1
 ```
 
 ### Running Experiments
 
 You can run experiments either through the command line interface (CLI) or the web frontend.
+
+#### Using the Frontend
+
+1. Start the web server if not already running:
+```bash
+multinear web
+```
+
+2. Open `http://127.0.0.1:8000` in your browser
+
+3. Click "Run Experiment" to start an experiment
+
+The frontend provides:
+- Real-time progress tracking
+- Interactive results visualization
+- Detailed task-level information
+- Ability to compare multiple runs
+
+![Experiment Overview](static/experiment.png)
 
 #### Using the CLI
 
@@ -144,23 +133,6 @@ Get detailed information about a specific run:
 multinear details <run-id>
 ```
 
-#### Using the Frontend
-
-1. Start the web server if not already running:
-```bash
-multinear web
-```
-
-2. Open `http://127.0.0.1:8000` in your browser
-
-3. Click "Run Experiment" to start an experiment
-
-The frontend provides:
-- Real-time progress tracking
-- Interactive results visualization
-- Detailed task-level information
-- Ability to compare multiple runs
-
 ## Analyzing Results
 
 Once the experiment run is complete, you can analyze the results via the frontend dashboard. The platform provides:
@@ -174,15 +146,27 @@ Once the experiment run is complete, you can analyze the results via the fronten
 
 Multinear consists of several components:
 
-- **CLI Tool (`cli/main.py`)**: Command-line interface for initializing projects and starting the web server.
+- **CLI (`cli/` folder)**: Command-line interface for initializing projects and starting the web server.
 - **Web Server (`main.py`)**: A FastAPI application serving API endpoints and static Svelte frontend files.
-- **Engine (`engine/` Directory)**:
+- **Engine (`engine/` folder)**:
   - **Run Management (`run.py`)**: Handles execution of tasks and evaluation.
   - **Storage (`storage.py`)**: Manages data models and database operations using SQLAlchemy.
   - **Evaluation (`evaluate.py`, `checklist.py`)**: Provides evaluation mechanisms for task outputs.
-- **API (`api/` Directory)**: Defines API routes and schemas for interaction with the frontend.
+- **API (`api/` folder)**: Defines API routes and schemas for interaction with the frontend.
 - **Utilities (`utils/capture.py`)**: Captures task execution output and logs.
 - **Frontend**: A Svelte-based interface for interacting with the platform (located in `multinear/frontend/`).
+
+## Development
+
+To install Multinear and its dependencies for local development, run:
+
+```bash
+git clone https://github.com/multinear/multinear
+cd multinear
+make install
+```
+
+This will install the required Python packages.
 
 ## Contributing
 
