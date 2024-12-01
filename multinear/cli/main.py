@@ -1,9 +1,13 @@
 import argparse
+from importlib.metadata import version
 from .commands import init, run, recent, details, web
 
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Multinear CLI tool")
+    parser.add_argument('--version', action='version',
+                        version=f'%(prog)s {version("multinear")}')
+
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
     # Define commands
