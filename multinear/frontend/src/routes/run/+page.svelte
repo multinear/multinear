@@ -116,9 +116,21 @@
             {/if}
         </div>
         {#if runDetails}
-            <div class="flex gap-2 items-center">
-                <span class="text-sm text-gray-500">Project</span>
-                <span class="text-md text-gray-800">{runDetails.project.name}</span>
+            <div class="flex gap-4 items-center">
+                <div class="flex gap-2 items-center">
+                    <span class="text-sm text-gray-500">Project</span>
+                    <span class="text-md text-gray-800">{runDetails.project.name}</span>
+                </div>
+                <Button
+                    variant="outline"
+                    class="text-sm"
+                    on:click={() => {
+                        const url = `/export/run#${runDetails.project.id}/${$selectedRunId}`;
+                        window.open(url, '_blank');
+                    }}
+                >
+                    Export
+                </Button>
             </div>
         {/if}
     </div>
@@ -282,36 +294,36 @@
                                                 <!-- Task Details Column -->
                                                 <div class="space-y-4 pr-12 border-r border-gray-200">
                                                     <div class="flex justify-between items-center mb-2">
-                                                        <h4 class="font-semibold text-lg">Task</h4>
+                                                        <h4 class="font-semibold text-lg">Task Details</h4>
                                                         <div class="text-sm text-gray-800">
                                                             Duration: 
-                                                            {#if task.executed_at}
+                                                            {#if task.task_details?.duration}
                                                                 {formatDuration(
                                                                     intervalToDuration({
-                                                                        start: new Date(task.created_at),
-                                                                        end: new Date(task.executed_at)
+                                                                        start: new Date(task.executed_at),
+                                                                        end: new Date(task.finished_at)
                                                                     }),
                                                                     { format: ['minutes', 'seconds'] }
                                                                 )}
-                                                            {:else}
-                                                                -
                                                             {/if}
                                                         </div>
                                                     </div>
+
                                                     {#if task.task_input}
                                                         <div>
-                                                            <h5 class="font-semibold mb-1">Input</h5>
-                                                            <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
+                                                            <h5 class="text-sm font-semibold mb-2">Input</h5>
+                                                            <div class="bg-white p-4 rounded border border-gray-200 whitespace-pre-wrap font-mono text-xs">
                                                                 {typeof task.task_input === 'object' && 'str' in task.task_input 
                                                                     ? task.task_input.str 
                                                                     : JSON.stringify(task.task_input, null, 2)}
                                                             </div>
                                                         </div>
                                                     {/if}
+
                                                     {#if task.task_output}
                                                         <div>
                                                             <div class="flex justify-between items-center mb-1">
-                                                                <h5 class="font-semibold">Output</h5>
+                                                                <h5 class="text-sm font-semibold">Output</h5>
                                                                 <Button 
                                                                     variant="outline" 
                                                                     size="sm"
@@ -325,45 +337,52 @@
                                                                     Cross-Compare
                                                                 </Button>
                                                             </div>
-                                                            <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
+                                                            <div class="bg-white p-4 rounded border border-gray-200 whitespace-pre-wrap font-mono text-xs">
                                                                 {typeof task.task_output === 'object' && 'str' in task.task_output 
                                                                     ? task.task_output.str 
                                                                     : JSON.stringify(task.task_output, null, 2)}
                                                             </div>
                                                         </div>
                                                     {/if}
+
                                                     {#if task.task_details}
                                                         <div>
-                                                            <h5 class="font-semibold mb-1">Details</h5>
-                                                            {#each Object.entries(task.task_details) as [key, value]}
-                                                                <div class="mb-1 pl-2">
-                                                                    <h6 class="font-semibold">{key}</h6>
-                                                                    <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
-                                                                        {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                                                            <h5 class="text-sm font-semibold mb-2">Details</h5>
+                                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                                {#each Object.entries(task.task_details) as [key, value]}
+                                                                    <div>
+                                                                        <div class="text-sm font-medium text-gray-600 mb-1">{key}</div>
+                                                                        <div class="bg-white p-3 rounded border border-gray-200 whitespace-pre-wrap font-mono text-xs">
+                                                                            {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            {/each}
+                                                                {/each}
+                                                            </div>
                                                         </div>
                                                     {/if}
+
                                                     {#if task.task_logs}
                                                         <div>
-                                                            <h5 class="font-semibold mb-1">Logs</h5>
-                                                            <details>
-                                                                <summary class="cursor-pointer text-blue-500">Show Logs</summary>
-                                                                <table class="text-sm bg-white p-2 rounded border overflow-auto w-full mt-2">
-                                                                    <thead>
+                                                            <h5 class="text-sm font-semibold mb-2">Logs</h5>
+                                                            <details class="bg-white rounded border border-gray-200">
+                                                                <summary class="px-4 py-2 cursor-pointer hover:bg-gray-50">
+                                                                    View Logs
+                                                                </summary>
+                                                                <table class="w-full text-sm">
+                                                                    <thead class="bg-gray-50 border-y border-gray-200">
                                                                         <tr>
-                                                                            <th class="text-left">Level</th>
-                                                                            <th class="text-left">Timestamp</th>
-                                                                            <th class="text-left">Message</th>
+                                                                            <th class="px-4 py-2 text-left w-32">Info</th>
+                                                                            <th class="px-4 py-2 text-left">Message</th>
                                                                         </tr>
                                                                     </thead>
-                                                                    <tbody>
+                                                                    <tbody class="divide-y divide-gray-100">
                                                                         {#each task.task_logs.logs as log}
-                                                                            <tr>
-                                                                                <td>{log.level}</td>
-                                                                                <td>{new Date(log.timestamp * 1000).toLocaleString()}</td>
-                                                                                <td>{log.message}</td>
+                                                                            <tr class="hover:bg-gray-50">
+                                                                                <td class="px-4 py-2">
+                                                                                    <div class="text-xs text-gray-500">{log.level}</div>
+                                                                                    <div class="text-sm">{new Date(log.timestamp * 1000).toLocaleString()}</div>
+                                                                                </td>
+                                                                                <td class="px-4 py-2">{log.message}</td>
                                                                             </tr>
                                                                         {/each}
                                                                     </tbody>
@@ -404,51 +423,43 @@
                                                     
                                                     {#if task.eval_details?.evaluations}
                                                         <div>
-                                                            <!-- <h5 class="font-semibold mb-2">Evaluation Criteria</h5> -->
-                                                            <Table.Root>
-                                                                <Table.Header>
-                                                                    <Table.Row>
-                                                                        <Table.Head>Criteria</Table.Head>
-                                                                        <Table.Head class="w-24 text-center">Score</Table.Head>
-                                                                    </Table.Row>
-                                                                </Table.Header>
-                                                                <Table.Body>
-                                                                    {#each task.eval_details.evaluations as ev}
-                                                                        <Table.Row>
-                                                                            <Table.Cell>
-                                                                                <div class="space-y-1">
-                                                                                    <div>{ev.criterion}</div>
-                                                                                    <div class="text-sm text-gray-500">{ev.rationale}</div>
-                                                                                </div>
-                                                                            </Table.Cell>
-                                                                            <Table.Cell class="text-center">
-                                                                                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full 
-                                                                                    {ev.score >= 1 ? 'bg-green-100 text-green-800' : 
-                                                                                     ev.score > 0 ? 'bg-yellow-100 text-yellow-800' : 
-                                                                                     'bg-red-100 text-red-800'}">
+                                                            <h4 class="font-semibold text-lg mb-3">Evaluation Results</h4>
+                                                            <div class="space-y-4 divide-y divide-gray-100">
+                                                                {#each task.eval_details.evaluations as ev}
+                                                                    <div class="pt-4 first:pt-0">
+                                                                        <div class="flex items-center gap-3">
+                                                                            <div class="flex-none flex items-center justify-center w-9 h-9 rounded-full border
+                                                                                {ev.score >= 1 ? 'bg-green-100 text-green-800 border-green-300' : 
+                                                                                ev.score > 0 ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 
+                                                                                'bg-red-100 text-red-800 border-red-300'}">
+                                                                                <span class="text-xs font-medium leading-none">
                                                                                     {(ev.score * 100).toFixed(0)}%
-                                                                                </div>
-                                                                            </Table.Cell>
-                                                                        </Table.Row>
-                                                                    {/each}
-                                                                </Table.Body>
-                                                            </Table.Root>
+                                                                                </span>
+                                                                            </div>
+                                                                            <div class="text-sm font-medium flex-1">{ev.criterion}</div>
+                                                                        </div>
+                                                                        <div class="mt-1 text-sm text-gray-600">{ev.rationale}</div>
+                                                                    </div>
+                                                                {/each}
+                                                            </div>
                                                         </div>
                                                     {/if}
 
                                                     {#if task.eval_details}
                                                         <div>
-                                                            <h5 class="font-semibold mb-1">Details</h5>
-                                                            {#each Object.entries(task.eval_details) as [key, value]}
-                                                                {#if key !== 'evaluations'}
-                                                                    <div class="mb-1 pl-2">
-                                                                        <h6 class="font-semibold">{key}</h6>
-                                                                        <div class="text-sm bg-white p-2 rounded border overflow-auto" style="white-space: pre-wrap;">
-                                                                            {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                                                            <h5 class="font-semibold mb-2">Details</h5>
+                                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                                {#each Object.entries(task.eval_details) as [key, value]}
+                                                                    {#if key !== 'evaluations'}
+                                                                        <div>
+                                                                            <div class="text-sm font-medium text-gray-600 mb-1">{key}</div>
+                                                                            <div class="bg-white p-3 rounded border border-gray-200 whitespace-pre-wrap font-mono text-xs">
+                                                                                {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
-                                                                {/if}
-                                                            {/each}
+                                                                    {/if}
+                                                                {/each}
+                                                            </div>
                                                         </div>
                                                     {/if}
                                                 </div>
