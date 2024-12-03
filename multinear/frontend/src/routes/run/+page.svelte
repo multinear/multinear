@@ -13,6 +13,10 @@
     import { filterTasks, getStatusCounts, getTaskStatus, truncateInput } from '$lib/utils/tasks';
     import { goto } from '$app/navigation';
     import { tick } from 'svelte';
+    import RunHeader from '$lib/components/RunHeader.svelte';
+    import Loading from '$lib/components/Loading.svelte';
+    import ErrorDisplay from '$lib/components/ErrorDisplay.svelte';
+    import StatusBadge from '$lib/components/StatusBadge.svelte';
 
     let runId: string | null = null;
     let runDetails: any = null;
@@ -106,55 +110,14 @@
 <svelte:window on:keydown={handleKeydown} />
 
 <div class="container mx-auto p-4">
-    <div class="flex justify-between items-center mb-4">
-        <div class="flex gap-12 items-center">
-            <h1 class="text-3xl font-bold">Run: {$selectedRunId.slice(-8)}</h1>
-            {#if runDetails}
-                <span class="text-xl text-gray-500">
-                    <TimeAgo date={runDetails.date} />
-                </span>
-            {/if}
-        </div>
-        {#if runDetails}
-            <div class="flex gap-4 items-center">
-                <div class="flex gap-2 items-center">
-                    <span class="text-sm text-gray-500">Project</span>
-                    <span class="text-md text-gray-800">{runDetails.project.name}</span>
-                </div>
-                <Button
-                    variant="outline"
-                    class="text-sm"
-                    on:click={() => {
-                        const url = `/export/run#${runDetails.project.id}/${$selectedRunId}`;
-                        window.open(url, '_blank');
-                    }}
-                >
-                    Export
-                </Button>
-            </div>
-        {/if}
-    </div>
+    {#if runDetails}
+        <RunHeader runDetails={runDetails} showExportButton={true} />
+    {/if}
 
     {#if loading}
-        <div class="text-center text-gray-500">Loading run details...</div>
+        <Loading message="Loading run details..." />
     {:else if error}
-        <Card.Root class="border-red-200 bg-red-50">
-            <Card.Header>
-                <Card.Title class="text-red-800">Error</Card.Title>
-                <Card.Description class="text-red-600">
-                    {error}
-                </Card.Description>
-            </Card.Header>
-            <Card.Footer class="flex justify-end">
-                <Button 
-                    variant="outline" 
-                    class="border-red-200 text-red-800 hover:bg-red-100"
-                    on:click={() => loadRunDetails(runId!)}
-                >
-                    Try Again
-                </Button>
-            </Card.Footer>
-        </Card.Root>
+        <ErrorDisplay errorMessage={error} onRetry={() => loadRunDetails(runId!)} />
     {:else if runDetails}
         <div class="space-y-6">
             <!-- Summary Card -->
@@ -268,12 +231,7 @@
                                         {truncateInput(task.task_input)}
                                     </Table.Cell>
                                     <Table.Cell>
-                                        <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium
-                                            ${task.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                                            task.status === 'failed' ? 'bg-red-100 text-red-800' : 
-                                            'bg-gray-100 text-gray-800'}`}>
-                                            {task.status}
-                                        </span>
+                                        <StatusBadge status={task.status} />
                                     </Table.Cell>
                                     <Table.Cell>
                                         <div class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 overflow-hidden flex">
@@ -415,7 +373,7 @@
                                                                 Score: {(task.eval_score * 100).toFixed(0)}%
                                                             </div>
                                                             <div class={`px-4 py-1 rounded-lg font-semibold
-                                                                ${task.eval_passed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                                ${task.eval_passed ? 'status-completed' : 'status-failed'}`}>
                                                                 {task.eval_passed ? 'PASSED' : 'FAILED'}
                                                             </div>
                                                         </div>
@@ -429,9 +387,9 @@
                                                                     <div class="pt-4 first:pt-0">
                                                                         <div class="flex items-center gap-3">
                                                                             <div class="flex-none flex items-center justify-center w-9 h-9 rounded-full border
-                                                                                {ev.score >= 1 ? 'bg-green-100 text-green-800 border-green-300' : 
-                                                                                ev.score > 0 ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 
-                                                                                'bg-red-100 text-red-800 border-red-300'}">
+                                                                                {ev.score >= 1 ? 'status-completed status-completed-border' : 
+                                                                                ev.score > 0 ? 'status-default status-default-border' : 
+                                                                                'status-failed status-failed-border'}">
                                                                                 <span class="text-xs font-medium leading-none">
                                                                                     {(ev.score * 100).toFixed(0)}%
                                                                                 </span>

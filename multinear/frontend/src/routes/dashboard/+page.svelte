@@ -10,6 +10,7 @@
     import JobControls from '$lib/components/JobControls.svelte';
     import KeyAlerts from '$lib/components/KeyAlerts.svelte';
     import type { KeyAlert } from '$lib/types/alerts';
+    import ErrorDisplay from '$lib/components/ErrorDisplay.svelte';
     // import EvalScoreTrend from '$lib/components/EvalScoreTrend.svelte';
     // import TestsDistributionTrend from '$lib/components/TestsDistributionTrend.svelte';
 
@@ -65,24 +66,7 @@
         </div>
     {:else if $projectsError}
         <div class="flex items-center justify-center h-[50vh] text-gray-500">
-            <Card.Root class="border-red-200 bg-red-50 w-96">
-                <Card.Header>
-                    <Card.Title class="text-red-800">Error</Card.Title>
-                    <Card.Description class="text-red-600">
-                        {$projectsError}
-                        <p class="pt-1">Check if API is running</p>
-                    </Card.Description>
-                </Card.Header>
-                <Card.Footer class="flex justify-end">
-                    <Button 
-                        variant="outline" 
-                        class="border-red-200 text-red-800 hover:bg-red-100"
-                        on:click={() => window.location.reload()}
-                    >
-                        Try Again
-                    </Button>
-                </Card.Footer>
-            </Card.Root>
+            <ErrorDisplay errorMessage={`${$projectsError} - Check if API is running`} onRetry={() => window.location.reload()} className="w-96" />
         </div>
     {:else if !currentProject}
         <div class="flex items-center justify-center h-[50vh] text-gray-500">

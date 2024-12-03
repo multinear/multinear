@@ -1,10 +1,14 @@
 <script lang="ts">
     import { getRunDetails } from '$lib/api';
-    import { selectedRunId } from '$lib/stores/projects';
-    import * as Table from "$lib/components/ui/table";
+    // import { selectedRunId } from '$lib/stores/projects';
+    // import * as Table from "$lib/components/ui/table";
     import { formatDuration, intervalToDuration } from 'date-fns';
-    import { getTaskStatus } from '$lib/utils/tasks';
+    // import { getTaskStatus } from '$lib/utils/tasks';
     import { onMount } from 'svelte';
+    import RunReportHeader from '$lib/components/RunReportHeader.svelte';
+    import Loading from '$lib/components/Loading.svelte';
+    import ErrorDisplay from '$lib/components/ErrorDisplay.svelte';
+    import StatusBadge from '$lib/components/StatusBadge.svelte';
 
     interface Task {
         id: string;
@@ -15,13 +19,15 @@
     let runDetails: any = null;
     let loading = true;
     let error: string | null = null;
+    let runId: string | null = null;
 
     // Handle URL hash changes
     function handleHashChange() {
         const hash = window.location.hash.slice(1); // Remove the # character
         if (hash) {
-            const [projectId, runId] = hash.split('/');
-            if (projectId && runId) {
+            const [projectId, newRunId] = hash.split('/');
+            if (projectId && newRunId) {
+                runId = newRunId;
                 loadRunDetails(runId);
             }
         }
@@ -61,9 +67,9 @@
     } : null;
 
     function getScoreColor(score: number): string {
-        if (score >= 0.9) return 'bg-green-100 text-green-800 border-green-300 print:bg-green-50';
-        if (score > 0) return 'bg-yellow-100 text-yellow-800 border-yellow-300 print:bg-yellow-50';
-        return 'bg-red-100 text-red-800 border-red-300 print:bg-red-50';
+        if (score >= 0.9) return 'status-completed status-completed-border print:bg-green-50';
+        if (score > 0) return 'status-default status-default-border print:bg-yellow-50';
+        return 'status-failed status-failed-border print:bg-red-50';
     }
 </script>
 
@@ -123,92 +129,11 @@
 
 <div class="min-h-screen bg-white">
     {#if loading}
-        <div class="text-center text-gray-500 p-8">Loading run details...</div>
+        <Loading message="Loading run details..." />
     {:else if error}
-        <div class="text-red-600 p-8">{error}</div>
+        <ErrorDisplay errorMessage={error} onRetry={() => loadRunDetails(runId!)} />
     {:else if runDetails}
-        <!-- Run Header with Status -->
-        <div class="p-8 border-b">
-            <div class="flex justify-between items-start mb-6">
-                <div>
-                    <h1 class="text-4xl font-bold mb-2">Run Report: {runDetails.id.slice(-8)}</h1>
-                    <div class="text-gray-600">
-                        Generated on {new Date().toLocaleString()}
-                    </div>
-                </div>
-                {#if taskStats}
-                    <div class={`text-center px-6 py-4 rounded-lg ${
-                        taskStats.failed === 0 ? 'bg-green-50 border-2 border-green-200' : 
-                        'bg-red-50 border-2 border-red-200'
-                    }`}>
-                        <div class="text-2xl font-bold mb-1">
-                            <span class={taskStats.failed === 0 ? 'text-green-600' : 'text-red-600'}>
-                                {taskStats.completed}/{taskStats.total}
-                            </span>
-                        </div>
-                        <div class={`text-sm ${taskStats.failed === 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            Tasks Passed
-                        </div>
-                        <div class="text-sm text-gray-500 mt-1">
-                            Avg Score: {(taskStats.avgScore * 100).toFixed(0)}%
-                        </div>
-                    </div>
-                {/if}
-            </div>
-
-            <!-- Summary Grid -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-                <div>
-                    <h3 class="text-sm font-medium text-gray-500">Project</h3>
-                    <p class="mt-1 text-lg">{runDetails.project.name}</p>
-                </div>
-                <div>
-                    <h3 class="text-sm font-medium text-gray-500">Status</h3>
-                    <p class="mt-1">
-                        <span class={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
-                            ${runDetails.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                            runDetails.status === 'failed' ? 'bg-red-100 text-red-800' : 
-                            'bg-gray-100 text-gray-800'}`}>
-                            {runDetails.status}
-                        </span>
-                    </p>
-                </div>
-                <div>
-                    <h3 class="text-sm font-medium text-gray-500">Created</h3>
-                    <p class="mt-1 text-lg">{new Date(runDetails.date).toLocaleString()}</p>
-                </div>
-                <div>
-                    <h3 class="text-sm font-medium text-gray-500">Model</h3>
-                    <p class="mt-1 text-lg">{runDetails.details.model || 'N/A'}</p>
-                </div>
-            </div>
-
-            <!-- Task Statistics -->
-            {#if taskStats}
-                <div class="flex gap-1 h-2 rounded-full overflow-hidden bg-gray-100 w-full">
-                    <div class="bg-green-500" style="width: {(taskStats.completed / taskStats.total * 100)}%"></div>
-                    <div class="bg-red-500" style="width: {(taskStats.failed / taskStats.total * 100)}%"></div>
-                    <div class="bg-gray-300" style="width: {(taskStats.inProgress / taskStats.total * 100)}%"></div>
-                </div>
-                <div class="flex gap-6 text-sm mt-2">
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                        <span>{taskStats.completed} completed</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                        <span>{taskStats.failed} failed</span>
-                    </div>
-                    {#if taskStats.inProgress > 0}
-                        <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 rounded-full bg-gray-300"></div>
-                            <span>{taskStats.inProgress} in progress</span>
-                        </div>
-                    {/if}
-                </div>
-            {/if}
-        </div>
-
+        <RunReportHeader {runDetails} {taskStats} />
         <!-- Tasks Section -->
         <div class="p-8">
             <h2 class="text-2xl font-bold mb-6">Tasks</h2>
@@ -238,12 +163,7 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-4">
-                            <span class={`px-3 py-1 rounded-full text-sm font-medium border
-                                ${task.status === 'completed' ? 'bg-green-100 text-green-800 border-green-300' : 
-                                task.status === 'failed' ? 'bg-red-100 text-red-800 border-red-300' : 
-                                'bg-gray-100 text-gray-800 border-gray-300'}`}>
-                                {task.status}
-                            </span>
+                            <StatusBadge status={task.status} className="px-3 py-1" />
                             {#if task.eval_score !== null}
                                 <div class="flex-none flex items-center justify-center w-9 h-9 rounded-full border
                                     {getScoreColor(task.eval_score)}">

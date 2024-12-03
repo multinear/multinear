@@ -1,4 +1,7 @@
 <script lang="ts">
+    import { goto } from '$app/navigation';
+    import { formatDuration, intervalToDuration } from 'date-fns';
+
     import * as Card from "$lib/components/ui/card";
     import * as Table from "$lib/components/ui/table";
     import { Label } from "$lib/components/ui/label";
@@ -6,13 +9,13 @@
     import { Checkbox } from "$lib/components/ui/checkbox";
     import TimeAgo from '$lib/components/TimeAgo.svelte';
     import StatusFilter from '$lib/components/StatusFilter.svelte';
-    import { formatDuration, intervalToDuration } from 'date-fns';
+    import StatusBadge from '$lib/components/StatusBadge.svelte';
+    import ErrorDisplay from '$lib/components/ErrorDisplay.svelte';
+    import DiffOutput from '$lib/components/DiffOutput.svelte';
 
     import { filterTasks, getStatusCounts, getTaskStatus } from '$lib/utils/tasks';
     import { getSameTasks } from '$lib/api';
-    import DiffOutput from '$lib/components/DiffOutput.svelte';
     import { selectedProjectId, selectedChallengeId } from '$lib/stores/projects';
-    import { goto } from '$app/navigation';
 
 
     let loading = true;
@@ -85,12 +88,7 @@
     {#if loading}
         <div class="text-center text-gray-500">Loading tasks...</div>
     {:else if error}
-        <Card.Root class="border-red-200 bg-red-50">
-            <Card.Header>
-                <Card.Title class="text-red-800">Error</Card.Title>
-                <Card.Description class="text-red-600">{error}</Card.Description>
-            </Card.Header>
-        </Card.Root>
+        <ErrorDisplay errorMessage={error} onRetry={loadTasks} />
     {:else if tasks.length}
         <div class="space-y-6">
             <!-- Common Input Card -->
@@ -213,12 +211,7 @@
 
                                             <div class="font-medium text-gray-500 text-sm">Status</div>
                                             <div class="flex items-center gap-2">
-                                                <span class={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
-                                                    ${task.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                                                    task.status === 'failed' ? 'bg-red-100 text-red-800' : 
-                                                    'bg-gray-100 text-gray-800'}`}>
-                                                    {task.status}
-                                                </span>
+                                                <StatusBadge status={task.status} />
                                                 <div class="flex items-center gap-1">
                                                     <div class="w-16 bg-gray-200 rounded-sm h-2 overflow-hidden flex">
                                                         <div

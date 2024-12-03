@@ -1,8 +1,8 @@
 <script lang="ts">
     import * as Card from "$lib/components/ui/card";
-    import { Button } from "$lib/components/ui/button";
     import { goto } from '$app/navigation';
     import { projects, projectsLoading, projectsError } from '$lib/stores/projects';
+    import ErrorDisplay from '$lib/components/ErrorDisplay.svelte';
 
     // If there is only one project, redirect to it
     $: if (!$projectsLoading && !$projectsError && $projects.length === 1) {
@@ -21,24 +21,7 @@
         {#if $projectsLoading}
             <div class="text-center text-gray-500">Loading projects...</div>
         {:else if $projectsError}
-            <Card.Root class="border-red-200 bg-red-50">
-                <Card.Header>
-                    <Card.Title class="text-red-800">Error</Card.Title>
-                    <Card.Description class="text-red-600">
-                        {$projectsError}
-                        <p class="pt-1">Check if API is running</p>
-                    </Card.Description>
-                </Card.Header>
-                <Card.Footer class="flex justify-end">
-                    <Button 
-                        variant="outline" 
-                        class="border-red-200 text-red-800 hover:bg-red-100"
-                        on:click={() => window.location.reload()}
-                    >
-                        Try Again
-                    </Button>
-                </Card.Footer>
-            </Card.Root>
+            <ErrorDisplay errorMessage={$projectsError} onRetry={() => window.location.reload()} />
         {:else if $projects.length === 0}
             <div class="text-center text-gray-500">No projects found</div>
         {:else}

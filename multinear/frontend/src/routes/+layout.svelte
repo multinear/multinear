@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
-	import { Input } from '$lib/components/ui/input';
+	import '../lib/styles/styles.css';
+	// import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import logo from '$lib/assets/logo.png';
 	import NavLink from '$lib/components/NavLink.svelte';

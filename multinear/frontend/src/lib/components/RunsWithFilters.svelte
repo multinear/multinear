@@ -20,6 +20,8 @@
     import { selectedProjectId } from "$lib/stores/projects";
     import TimeAgo from "$lib/components/TimeAgo.svelte";
     import { formatDuration, intervalToDuration } from 'date-fns';
+    import Loading from '$lib/components/Loading.svelte';
+    import ErrorDisplay from '$lib/components/ErrorDisplay.svelte';
 
     // Props passed from the parent component
     export let runsList: RecentRun[];
@@ -252,172 +254,155 @@
 
 <!-- Recent Runs -->
 <Card.Root>
-    {#if showViewAll}
-        <Card.Header>
-            <Card.Title>Recent Experiments</Card.Title>
-            <Card.Description>Latest experiment runs and their status</Card.Description>
-        </Card.Header>
-    {/if}
-    <Card.Content>
-        {#if isLoading}
-            <div class="flex items-center justify-center py-8 text-gray-500">
-                <div class="flex items-center gap-2">
-                    <Loader2 class="h-6 w-6 animate-spin" />
-                    <span>Loading recent runs...</span>
-                </div>
-            </div>
-        {:else if loadingError}
-            <Alert.Root variant="destructive">
-                <AlertCircle class="h-4 w-4" />
-                <Alert.Title>Error loading recent runs</Alert.Title>
-                <Alert.Description>{loadingError}</Alert.Description>
-            </Alert.Root>
-        {:else}
-            <Table.Root>
-                {#if showViewAll}
-                    <Table.Caption>
-                        <a href="/experiments#{$selectedProjectId}">View all runs</a>
-                    </Table.Caption>
-                {/if}
-                <Table.Header>
-                    <Table.Row>
-                        <Table.Head>Run ID</Table.Head>
-                        <Table.Head>Date & Time</Table.Head>
-                        <Table.Head>Duration</Table.Head>
-                        <Table.Head>Code Revision</Table.Head>
-                        <Table.Head>Model Version</Table.Head>
-                        <Table.Head>Total Tests</Table.Head>
-                        <Table.Head>Evaluation Score</Table.Head>
-                        <Table.Head>Test Results</Table.Head>
-                        <!-- <Table.Head>Actions</Table.Head> -->
-                    </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                    {#each filteredRuns as run}
-                        <Table.Row class="group cursor-pointer" on:click={() => handleRunSelect(run.id)}>
-                            <Table.Cell class="font-medium">
-                                <Tooltip.Root>
-                                    <Tooltip.Trigger>{run.id.slice(-8)}</Tooltip.Trigger>
-                                    <Tooltip.Content>
-                                        <p>Run ID: {run.id}</p>
-                                    </Tooltip.Content>
-                                </Tooltip.Root>
-                            </Table.Cell>
-                            <Table.Cell>
-                                <TimeAgo date={run.created_at} />
-                            </Table.Cell>
-                            <Table.Cell>
-                                {#if run.finished_at}
-                                    {formatDuration(
-                                        intervalToDuration({
-                                            start: new Date(run.created_at),
-                                            end: new Date(run.finished_at)
-                                        }),
-                                        { format: ['minutes', 'seconds'] }
-                                    )}
+    {#if isLoading}
+        <Loading message="Loading recent runs..." />
+    {:else if loadingError}
+        <ErrorDisplay errorMessage={loadingError} onRetry={() => {/* Define retry logic if applicable */}} />
+    {:else}
+        <Table.Root>
+            {#if showViewAll}
+                <Table.Caption>
+                    <a href="/experiments#{$selectedProjectId}">View all runs</a>
+                </Table.Caption>
+            {/if}
+            <Table.Header>
+                <Table.Row>
+                    <Table.Head>Run ID</Table.Head>
+                    <Table.Head>Date & Time</Table.Head>
+                    <Table.Head>Duration</Table.Head>
+                    <Table.Head>Code Revision</Table.Head>
+                    <Table.Head>Model Version</Table.Head>
+                    <Table.Head>Total Tests</Table.Head>
+                    <Table.Head>Evaluation Score</Table.Head>
+                    <Table.Head>Test Results</Table.Head>
+                    <!-- <Table.Head>Actions</Table.Head> -->
+                </Table.Row>
+            </Table.Header>
+            <Table.Body>
+                {#each filteredRuns as run}
+                    <Table.Row class="group cursor-pointer" on:click={() => handleRunSelect(run.id)}>
+                        <Table.Cell class="font-medium">
+                            <Tooltip.Root>
+                                <Tooltip.Trigger>{run.id.slice(-8)}</Tooltip.Trigger>
+                                <Tooltip.Content>
+                                    <p>Run ID: {run.id}</p>
+                                </Tooltip.Content>
+                            </Tooltip.Root>
+                        </Table.Cell>
+                        <Table.Cell>
+                            <TimeAgo date={run.created_at} />
+                        </Table.Cell>
+                        <Table.Cell>
+                            {#if run.finished_at}
+                                {formatDuration(
+                                    intervalToDuration({
+                                        start: new Date(run.created_at),
+                                        end: new Date(run.finished_at)
+                                    }),
+                                    { format: ['minutes', 'seconds'] }
+                                )}
+                            {:else}
+                                -
+                            {/if}
+                        </Table.Cell>
+                        <Table.Cell>{run.revision.slice(-8)}</Table.Cell>
+                        <Table.Cell>{run.model}</Table.Cell>
+                        <Table.Cell>{run.totalTests}</Table.Cell>
+                        <Table.Cell>
+                            <Badge
+                                variant={run.score >= 0.9
+                                    ? "success"
+                                    : run.score >= 0.7
+                                        ? "warning"
+                                        : "destructive"}
+                            >
+                                {run.score.toFixed(2)}
+                            </Badge>
+                        </Table.Cell>
+                        <Table.Cell class="w-[300px]">
+                            <Tooltip.Root>
+                                <Tooltip.Trigger class="w-full">
+                                    <div
+                                        class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 overflow-hidden flex"
+                                    >
+                                        {#if run.pass > 0}
+                                            <div
+                                                class="bg-green-600 h-4 min-w-[5px]"
+                                                style="width: {(run.pass / run.totalTests) * 100}%"
+                                            ></div>
+                                        {/if}
+                                        {#if run.fail > 0}
+                                            <div
+                                                class="bg-red-600 h-4 min-w-[5px]"
+                                                style="width: {(run.fail / run.totalTests) * 100}%"
+                                            ></div>
+                                        {/if}
+                                        {#if run.regression > 0}
+                                            <div
+                                                class="bg-yellow-400 h-4 min-w-[5px]"
+                                                style="width: {(run.regression / run.totalTests) * 100}%"
+                                            ></div>
+                                        {/if}
+                                    </div>
+                                </Tooltip.Trigger>
+                                <Tooltip.Content>
+                                    <div class="space-y-1">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-3 h-3 bg-green-600 rounded-full"></div>
+                                            <span>Pass: {run.pass} <span class="text-gray-400">({((run.pass / run.totalTests) * 100).toFixed(1)}%)</span></span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-3 h-3 bg-red-600 rounded-full"></div>
+                                            <span>Fail: {run.fail} <span class="text-gray-400">({((run.fail / run.totalTests) * 100).toFixed(1)}%)</span></span>
+                                        </div>
+                                        {#if run.regression > 0}
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                                                <span>Regression: {run.regression} <span class="text-gray-400">({((run.regression / run.totalTests) * 100).toFixed(1)}%)</span></span>
+                                            </div>
+                                        {/if}
+                                        <div class="pt-1 border-t">
+                                            <span>Total: {run.totalTests}</span>
+                                        </div>
+                                    </div>
+                                </Tooltip.Content>
+                            </Tooltip.Root>
+                        </Table.Cell>
+                        <!-- 
+                        <Table.Cell>
+                            <div
+                                class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                                {#if run.bookmarked}
+                                    <Bookmark
+                                        class="h-4 w-4 text-blue-500"
+                                    />
+                                {:else if run.noted}
+                                    <FileEdit
+                                        class="h-4 w-4 text-green-500"
+                                    />
                                 {:else}
-                                    -
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        class="h-8 w-8 p-0"
+                                    >
+                                        <Bookmark class="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        class="h-8 w-8 p-0"
+                                    >
+                                        <FileEdit class="h-4 w-4" />
+                                    </Button>
                                 {/if}
-                            </Table.Cell>
-                            <Table.Cell>{run.revision.slice(-8)}</Table.Cell>
-                            <Table.Cell>{run.model}</Table.Cell>
-                            <Table.Cell>{run.totalTests}</Table.Cell>
-                            <Table.Cell>
-                                <Badge
-                                    variant={run.score >= 0.9
-                                        ? "success"
-                                        : run.score >= 0.7
-                                            ? "warning"
-                                            : "destructive"}
-                                >
-                                    {run.score.toFixed(2)}
-                                </Badge>
-                            </Table.Cell>
-                            <Table.Cell class="w-[300px]">
-                                <Tooltip.Root>
-                                    <Tooltip.Trigger class="w-full">
-                                        <div
-                                            class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 overflow-hidden flex"
-                                        >
-                                            {#if run.pass > 0}
-                                                <div
-                                                    class="bg-green-600 h-4 min-w-[5px]"
-                                                    style="width: {(run.pass / run.totalTests) * 100}%"
-                                                ></div>
-                                            {/if}
-                                            {#if run.fail > 0}
-                                                <div
-                                                    class="bg-red-600 h-4 min-w-[5px]"
-                                                    style="width: {(run.fail / run.totalTests) * 100}%"
-                                                ></div>
-                                            {/if}
-                                            {#if run.regression > 0}
-                                                <div
-                                                    class="bg-yellow-400 h-4 min-w-[5px]"
-                                                    style="width: {(run.regression / run.totalTests) * 100}%"
-                                                ></div>
-                                            {/if}
-                                        </div>
-                                    </Tooltip.Trigger>
-                                    <Tooltip.Content>
-                                        <div class="space-y-1">
-                                            <div class="flex items-center gap-2">
-                                                <div class="w-3 h-3 bg-green-600 rounded-full"></div>
-                                                <span>Pass: {run.pass} <span class="text-gray-400">({((run.pass / run.totalTests) * 100).toFixed(1)}%)</span></span>
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <div class="w-3 h-3 bg-red-600 rounded-full"></div>
-                                                <span>Fail: {run.fail} <span class="text-gray-400">({((run.fail / run.totalTests) * 100).toFixed(1)}%)</span></span>
-                                            </div>
-                                            {#if run.regression > 0}
-                                                <div class="flex items-center gap-2">
-                                                    <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                                                    <span>Regression: {run.regression} <span class="text-gray-400">({((run.regression / run.totalTests) * 100).toFixed(1)}%)</span></span>
-                                                </div>
-                                            {/if}
-                                            <div class="pt-1 border-t">
-                                                <span>Total: {run.totalTests}</span>
-                                            </div>
-                                        </div>
-                                    </Tooltip.Content>
-                                </Tooltip.Root>
-                            </Table.Cell>
-                            <!-- 
-                            <Table.Cell>
-                                <div
-                                    class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                    {#if run.bookmarked}
-                                        <Bookmark
-                                            class="h-4 w-4 text-blue-500"
-                                        />
-                                    {:else if run.noted}
-                                        <FileEdit
-                                            class="h-4 w-4 text-green-500"
-                                        />
-                                    {:else}
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            class="h-8 w-8 p-0"
-                                        >
-                                            <Bookmark class="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            class="h-8 w-8 p-0"
-                                        >
-                                            <FileEdit class="h-4 w-4" />
-                                        </Button>
-                                    {/if}
-                                </div>
-                            </Table.Cell> 
-                            -->
-                        </Table.Row>
-                    {/each}
-                </Table.Body>
-            </Table.Root>
-        {/if}
-    </Card.Content>
+                            </div>
+                        </Table.Cell> 
+                        -->
+                    </Table.Row>
+                {/each}
+            </Table.Body>
+        </Table.Root>
+    {/if}
 </Card.Root>
