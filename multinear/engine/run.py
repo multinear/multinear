@@ -10,6 +10,7 @@ from .storage import JobModel, TaskModel, TaskStatus
 from .evaluate import evaluate
 from ..utils.capture import OutputCapture
 from ..utils.git import get_git_revision
+from .utils import rephrase_input
 
 
 def run_experiment(project_config: Dict[str, Any], job: JobModel):
@@ -57,77 +58,103 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel):
     # Run the experiment
     try:
         results = []
-        total_tasks = len(config["tasks"])
+        total_tasks = sum(task.get("repeat", 1) for task in config["tasks"])
 
         yield {"status": TaskStatus.STARTING, "total": total_tasks}
 
-        for i, task in enumerate(config["tasks"]):
-            current_task = i + 1
+        current_task = 0
+        for task in config["tasks"]:
+            # Get number of repeats for this task (default to 1)
+            repeats = task.get("repeat", 1)
+            
+            # Initialize variations tracking for this task
+            if task.get("rephrase", False):
+                previous_variations = []
 
-            try:
-                input = task["input"]
-                challenge_id = task.get("id", None)
-                if not challenge_id:  # Calculate challenge ID from input
-                    challenge_id = hashlib.sha256(
-                        json.dumps(input).encode()
-                    ).hexdigest()
+            for repeat in range(repeats):
+                current_task += 1
 
-                # Start new task
-                task_id = TaskModel.start(
-                    job_id=job.id,
-                    task_number=current_task,
-                    challenge_id=challenge_id
-                )
+                try:
+                    input = task["input"]
+                    # Rephrase the input for repeats, if enabled
+                    if repeat > 0 and task.get("rephrase", False):
+                        input = rephrase_input(input, previous_variations)
+                        previous_variations.append(input)
 
-                yield {
-                    "status": TaskStatus.RUNNING,
-                    "current": current_task,
-                    "total": total_tasks,
-                    "details": f"Running task {current_task}/{total_tasks}"
-                }
+                    challenge_id = task.get("id", None)
+                    if not challenge_id:  # Calculate challenge ID from input
+                        # Include repeat number in challenge ID to make it unique
+                        challenge_id = hashlib.sha256(
+                            json.dumps(input).encode()
+                        ).hexdigest()
 
-                # Do we simulate a failure?
-                fail_simulate = config.get("meta", {}).get("fail_simulate", None)
-                if fail_simulate is not None and random.random() < fail_simulate:
-                    raise Exception("Simulated failure")
+                    # Append repeat counter to challenge_id if this is a repeat
+                    if repeat > 0:
+                        challenge_id = f"{challenge_id}_{repeat}"
 
-                # Run the task
-                with OutputCapture() as capture:
-                    task_result = task_runner_module.run_task(input)
-                TaskModel.executed(
-                    task_id,
-                    input,
-                    task_result["output"],
-                    task_result["details"],
-                    capture.logs,
-                )
+                    # Start new task
+                    task_id = TaskModel.start(
+                        job_id=job.id,
+                        task_number=current_task,
+                        challenge_id=challenge_id
+                    )
 
-                yield {
-                    "status": TaskStatus.EVALUATING,
-                    "current": current_task,
-                    "total": total_tasks,
-                    "details": f"Evaluating task {current_task}/{total_tasks}"
-                }
+                    yield {
+                        "status": TaskStatus.RUNNING,
+                        "current": current_task,
+                        "total": total_tasks,
+                        "details": (
+                            f"Running task {current_task}/{total_tasks}"
+                            +
+                            (f" (repeat {repeat + 1}/{repeats})" if repeat > 0 else "")
+                        )
+                    }
 
-                # Evaluate the task
-                with OutputCapture() as capture:
-                    eval_result = evaluate(task, input, task_result["output"])
-                TaskModel.evaluated(
-                    task_id,
-                    {k: v for k, v in task.items() if k != "input"},
-                    eval_result["passed"],
-                    eval_result["score"],
-                    eval_result["details"],
-                    capture.logs,
-                )
+                    # Do we simulate a failure?
+                    fail_simulate = config.get("meta", {}).get("fail_simulate", None)
+                    if fail_simulate is not None and random.random() < fail_simulate:
+                        raise Exception("Simulated failure")
 
-                results.append([task_result, eval_result])
+                    # Run the task
+                    with OutputCapture() as capture:
+                        task_result = task_runner_module.run_task(input)
+                    TaskModel.executed(
+                        task_id,
+                        input,
+                        task_result["output"],
+                        task_result["details"],
+                        capture.logs,
+                    )
 
-            except Exception as e:
-                error_msg = str(e)
-                print(f"Error running task {current_task}/{total_tasks}: {error_msg}")
-                results.append({"error": error_msg})
-                TaskModel.fail(task_id, error=error_msg)
+                    yield {
+                        "status": TaskStatus.EVALUATING,
+                        "current": current_task,
+                        "total": total_tasks,
+                        "details": f"Evaluating task {current_task}/{total_tasks}"
+                    }
+
+                    # Evaluate the task
+                    with OutputCapture() as capture:
+                        eval_result = evaluate(task, input, task_result["output"])
+                    TaskModel.evaluated(
+                        task_id,
+                        {k: v for k, v in task.items() if k != "input"},
+                        eval_result["passed"],
+                        eval_result["score"],
+                        eval_result["details"],
+                        capture.logs,
+                    )
+
+                    results.append([task_result, eval_result])
+
+                except Exception as e:
+                    # raise e
+                    error_msg = str(e)
+                    print(
+                        f"Error running task {current_task}/{total_tasks}: {error_msg}"
+                    )
+                    results.append({"error": error_msg})
+                    TaskModel.fail(task_id, error=error_msg)
 
         yield {
             "status": TaskStatus.COMPLETED,
@@ -137,6 +164,7 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel):
         }
 
     except Exception as e:
+        # raise e
         print(f"Error running experiment: {e}")
         yield {
             "status": TaskStatus.FAILED,

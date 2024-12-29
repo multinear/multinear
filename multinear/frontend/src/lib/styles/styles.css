@@ -16,9 +16,9 @@
 }
 
 .status-default {
-    @apply bg-gray-100 text-gray-800;
+    @apply bg-yellow-100 text-gray-800;
 }
 
 .status-default-border {
-    @apply border-gray-300;
+    @apply border-yellow-300;
 }

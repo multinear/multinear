@@ -48,6 +48,7 @@ def background_job(project_id: str, job_id: str):
         # Mark the job as finished upon successful completion
         job.finish()
     except Exception as e:
+        # raise e
         # Handle exceptions and update the job as failed
         print(f"Error running experiment API: {e}")
         job = JobModel.find(job_id)

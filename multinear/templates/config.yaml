@@ -3,5 +3,5 @@ project:
   id: {{ project_id }}
   description: {{ description }}
 
-evals:
+tasks:
   # Add your evaluations here 

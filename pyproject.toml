@@ -8,6 +8,7 @@ dependencies = [
     "autoevals>=0.0.105",
     "fastapi[standard]>=0.115.4",
     "jinja2>=3.1.4",
+    "jsonpath-ng>=1.7.0",
     "openai>=1.55.0",
     "rich>=13.9.4",
     "sqlalchemy>=2.0.36",

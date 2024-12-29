@@ -1,4 +1,5 @@
 from .checklist import ChecklistClassifier2
+from .list import ListEvaluator
 
 
 def evaluate(spec: dict, input: any, output: any):
@@ -13,20 +14,23 @@ def evaluate(spec: dict, input: any, output: any):
     Returns:
         A dictionary containing the evaluation result.
     """
-
     # Set the minimum score required to pass
     min_score = spec.get('min_score', 1.0)
 
     evaluator = None
     if 'checklist' in spec:
-        # Use the ChecklistClassifier2 for evaluation
         evaluator = ChecklistClassifier2()
         result = evaluator(output, spec['checklist'], input=input)
+    elif 'list' in spec:
+        evaluator = ListEvaluator(spec['list'])
+        result = evaluator(output)
     else:
         raise ValueError("No evaluator specified")
 
     return {
-        'score': result.score,
-        'passed': result.score >= min_score,
-        'details': result.metadata
+        'score': result['score'] if isinstance(result, dict) else result.score,
+        'passed': (
+            result['score'] if isinstance(result, dict) else result.score
+        ) >= min_score,
+        'details': result['metadata'] if isinstance(result, dict) else result.metadata
     }

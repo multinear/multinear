@@ -33,7 +33,7 @@ def handle(args):
     description = input("Project description: ").strip()
 
     # Read the configuration template
-    template_path = Path(__file__).parent.parent / 'templates' / 'config.yaml'
+    template_path = Path(__file__).parent.parent.parent / 'templates' / 'config.yaml'
     with open(template_path, 'r') as f:
         template_content = f.read()
 
