@@ -30,6 +30,7 @@
 		"@sveltejs/adapter-static": "^3.0.6",
 		"chart.js": "^4.4.6",
 		"date-fns": "^4.1.0",
-		"diff-match-patch": "^1.0.5"
+		"diff-match-patch": "^1.0.5",
+		"marked": "^15.0.6"
 	}
 }

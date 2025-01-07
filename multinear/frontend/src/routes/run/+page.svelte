@@ -18,12 +18,16 @@
     import ErrorDisplay from '$lib/components/ErrorDisplay.svelte';
     import StatusBadge from '$lib/components/StatusBadge.svelte';
     import { handleStartExperiment, jobStore, handleRerunTask } from '$lib/stores/jobs';
+    import { marked } from 'marked';
+    import { Switch } from "$lib/components/ui/switch";
 
     let runId: string | null = null;
     let runDetails: any = null;
     let loading = true;
     let error: string | null = null;
     let expandedTaskId: string | null = null;
+    let showOutputMarkdown = false;
+    let showPromptMarkdown = false;
 
     $: {
         if ($selectedRunId) loadRunDetails($selectedRunId);
@@ -302,23 +306,39 @@
                                                         <div>
                                                             <div class="flex justify-between items-center mb-1">
                                                                 <h5 class="text-sm font-semibold">Output</h5>
-                                                                <Button 
-                                                                    variant="outline" 
-                                                                    size="sm"
-                                                                    class="text-sm bg-gray-200 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
-                                                                    on:click={() => {
-                                                                        const projectId = runDetails.project.id;
-                                                                        const challengeId = task.challenge_id;
-                                                                        goto(`/compare#${projectId}/c:${challengeId}`);
-                                                                    }}
-                                                                >
-                                                                    Cross-Compare
-                                                                </Button>
+                                                                <div class="flex items-center gap-4">
+                                                                    <div class="flex items-center space-x-2">
+                                                                        <Switch id="output-markdown" bind:checked={showOutputMarkdown} />
+                                                                        <Label for="output-markdown" class="text-sm">Markdown</Label>
+                                                                    </div>
+                                                                    <Button 
+                                                                        variant="outline" 
+                                                                        size="sm"
+                                                                        class="text-sm bg-gray-200 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
+                                                                        on:click={() => {
+                                                                            const projectId = runDetails.project.id;
+                                                                            const challengeId = task.challenge_id;
+                                                                            goto(`/compare#${projectId}/c:${challengeId}`);
+                                                                        }}
+                                                                    >
+                                                                        Cross-Compare
+                                                                    </Button>
+                                                                </div>
                                                             </div>
-                                                            <div class="bg-white p-4 rounded border border-gray-200 whitespace-pre-wrap font-mono text-xs">
-                                                                {typeof task.task_output === 'object' && 'str' in task.task_output 
-                                                                    ? task.task_output.str 
-                                                                    : JSON.stringify(task.task_output, null, 2)}
+                                                            <div class="bg-white p-4 rounded border border-gray-200">
+                                                                {#if showOutputMarkdown}
+                                                                    <div class="markdown-content">
+                                                                        {@html marked(typeof task.task_output === 'object' && 'str' in task.task_output 
+                                                                            ? task.task_output.str 
+                                                                            : JSON.stringify(task.task_output, null, 2))}
+                                                                    </div>
+                                                                {:else}
+                                                                    <div class="whitespace-pre-wrap font-mono text-xs">
+                                                                        {typeof task.task_output === 'object' && 'str' in task.task_output 
+                                                                            ? task.task_output.str 
+                                                                            : JSON.stringify(task.task_output, null, 2)}
+                                                                    </div>
+                                                                {/if}
                                                             </div>
                                                         </div>
                                                     {/if}
@@ -328,14 +348,46 @@
                                                             <h5 class="text-sm font-semibold mb-2">Details</h5>
                                                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                                 {#each Object.entries(task.task_details) as [key, value]}
-                                                                    <div>
-                                                                        <div class="text-sm font-medium text-gray-600 mb-1">{key}</div>
-                                                                        <div class="bg-white p-3 rounded border border-gray-200 whitespace-pre-wrap font-mono text-xs">
-                                                                            {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                                                                    {#if key !== 'prompt'}
+                                                                        <div>
+                                                                            <div class="text-sm font-medium text-gray-600 mb-1">{key}</div>
+                                                                            <div class="bg-white p-3 rounded border border-gray-200 whitespace-pre-wrap font-mono text-xs">
+                                                                                {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
+                                                                    {/if}
                                                                 {/each}
                                                             </div>
+                                                        </div>
+                                                    {/if}
+
+                                                    {#if task.task_details?.prompt}
+                                                        <div>
+                                                            <h5 class="text-sm font-semibold mb-2">Prompt</h5>
+                                                            <details class="bg-white rounded border border-gray-200">
+                                                                <summary class="px-4 py-2 cursor-pointer hover:bg-gray-50 flex justify-between items-center">
+                                                                    <span>View Prompt</span>
+                                                                    <div class="flex items-center space-x-2">
+                                                                        <Switch id="prompt-markdown" bind:checked={showPromptMarkdown} />
+                                                                        <Label for="prompt-markdown" class="text-sm">Markdown</Label>
+                                                                    </div>
+                                                                </summary>
+                                                                <div class="p-4">
+                                                                    {#if showPromptMarkdown}
+                                                                        <div class="markdown-content">
+                                                                            {@html marked(typeof task.task_details.prompt === 'string' 
+                                                                                ? task.task_details.prompt 
+                                                                                : JSON.stringify(task.task_details.prompt, null, 2))}
+                                                                        </div>
+                                                                    {:else}
+                                                                        <div class="whitespace-pre-wrap font-mono text-xs">
+                                                                            {typeof task.task_details.prompt === 'string' 
+                                                                                ? task.task_details.prompt 
+                                                                                : JSON.stringify(task.task_details.prompt, null, 2)}
+                                                                        </div>
+                                                                    {/if}
+                                                                </div>
+                                                            </details>
                                                         </div>
                                                     {/if}
 

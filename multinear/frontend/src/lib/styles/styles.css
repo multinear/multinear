@@ -22,3 +22,170 @@
 .status-default-border {
     @apply border-yellow-300;
 }
+
+/* Base markdown content styles */
+.markdown-content {
+    color: theme(colors.gray.900);
+    line-height: 1.7;
+    font-size: 0.875rem;
+}
+
+/* Headings */
+.markdown-content h1 {
+    font-size: 1.875rem;
+    font-weight: 600;
+    margin: 1.5rem 0 1rem;
+    line-height: 1.25;
+}
+
+.markdown-content h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 1.5rem 0 1rem;
+    line-height: 1.25;
+}
+
+.markdown-content h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 1.5rem 0 1rem;
+    line-height: 1.25;
+}
+
+.markdown-content h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 1.5rem 0 1rem;
+    line-height: 1.25;
+}
+
+/* Paragraphs and spacing */
+.markdown-content p {
+    margin: 1rem 0;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+}
+
+.markdown-content li {
+    margin: 0.5rem 0;
+}
+
+.markdown-content ul li {
+    list-style-type: disc;
+}
+
+.markdown-content ol li {
+    list-style-type: decimal;
+}
+
+/* Code blocks and inline code */
+.markdown-content code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.875rem;
+    background-color: theme(colors.gray.100);
+    padding: 0.2em 0.4em;
+    border-radius: 0.25rem;
+}
+
+.markdown-content pre {
+    background-color: theme(colors.gray.100);
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 0.375rem;
+    overflow-x: auto;
+}
+
+.markdown-content pre code {
+    background-color: transparent;
+    padding: 0;
+    font-size: 0.875rem;
+    color: inherit;
+    white-space: pre;
+}
+
+/* Links */
+.markdown-content a {
+    color: theme(colors.blue.600);
+    text-decoration: underline;
+}
+
+.markdown-content a:hover {
+    color: theme(colors.blue.700);
+}
+
+/* Blockquotes */
+.markdown-content blockquote {
+    border-left: 4px solid theme(colors.gray.300);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: theme(colors.gray.600);
+}
+
+/* Tables */
+.markdown-content table {
+    width: 100%;
+    margin: 1rem 0;
+    border-collapse: collapse;
+}
+
+.markdown-content th {
+    background-color: theme(colors.gray.100);
+    font-weight: 600;
+    text-align: left;
+}
+
+.markdown-content td,
+.markdown-content th {
+    padding: 0.5rem;
+    border: 1px solid theme(colors.gray.300);
+}
+
+/* Horizontal rules */
+.markdown-content hr {
+    border: 0;
+    border-top: 1px solid theme(colors.gray.300);
+    margin: 2rem 0;
+}
+
+/* Images */
+.markdown-content img {
+    max-width: 100%;
+    height: auto;
+    margin: 1rem 0;
+    border-radius: 0.375rem;
+}
+
+/* Dark mode adjustments */
+.dark .markdown-content {
+    color: theme(colors.gray.100);
+}
+
+.dark .markdown-content code {
+    background-color: theme(colors.gray.800);
+}
+
+.dark .markdown-content pre {
+    background-color: theme(colors.gray.800);
+}
+
+.dark .markdown-content blockquote {
+    border-left-color: theme(colors.gray.600);
+    color: theme(colors.gray.400);
+}
+
+.dark .markdown-content th {
+    background-color: theme(colors.gray.800);
+}
+
+.dark .markdown-content td,
+.dark .markdown-content th {
+    border-color: theme(colors.gray.600);
+}
+
+.dark .markdown-content hr {
+    border-color: theme(colors.gray.600);
+}
