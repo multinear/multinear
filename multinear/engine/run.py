@@ -43,6 +43,9 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
 
     # If challenge_id is provided, filter tasks to only include the specified task
     if challenge_id:
+        # if challenge_id is a repeated task id (looks like xxx_[number]), clean it up
+        if "_" in challenge_id and challenge_id.split("_")[1].isdigit():
+            challenge_id = challenge_id.split("_")[0]
         config["tasks"] = [task for task in config["tasks"] if task.get("id") == challenge_id]
         if not config["tasks"]:
             raise ValueError(f"No task found with challenge ID {challenge_id}")
