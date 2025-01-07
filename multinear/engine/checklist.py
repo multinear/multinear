@@ -70,7 +70,8 @@ class ChecklistClassifier2(OpenAILLMClassifier):
             {
                 "role": "system",
                 "content": """You are an expert evaluator assessing answers against specific criteria. 
-For each checklist item, carefully evaluate if the submission meets the criterion and provide a detailed rationale."""
+For each checklist item, carefully evaluate if the submission meets the criterion and provide a detailed rationale.
+Return criterion verbatim, exactly as it is in the checklist."""
             },
             {
                 "role": "user",
