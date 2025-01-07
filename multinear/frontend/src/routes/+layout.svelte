@@ -104,7 +104,7 @@
 			<!-- Left side: © symbol -->
 			<div>
 				<a href="https://multinear.com" target="_blank" rel="noopener noreferrer">
-					&copy; 2024 Multinear.
+					&copy; 2025 Multinear.
 				</a>
 			</div>
 

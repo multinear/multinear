@@ -1,7 +1,15 @@
-import { writable } from 'svelte/store';
-import { startExperiment, getJobStatus } from '$lib/api';
+import { writable, get } from 'svelte/store';
+import { startExperiment, getJobStatus, startSingleTask } from '$lib/api';
 import type { JobResponse } from '$lib/api';
+import { goto } from '$app/navigation';
 
+interface PendingRun {
+    type: 'experiment' | 'task';
+    projectId: string;
+    challengeId?: string;
+}
+
+export const pendingRunStore = writable<PendingRun | null>(null);
 
 export interface JobState {
     currentJob: string | null;
@@ -17,24 +25,12 @@ export const jobStore = writable<JobState>({
     taskStatusCounts: {},
 });
 
-export async function handleStartExperiment(selectedProjectId: string, reloadRecentRuns: () => Promise<void>) {
-    try {
-        const data = await startExperiment(selectedProjectId);
-        const jobId = data.job_id;
-
-        jobStore.update(state => ({
-            ...state,
-            currentJob: jobId,
-            jobStatus: 'started',
-            jobDetails: null,
-            taskStatusCounts: {},
-        }));
-
-        // Polling for job status
-        let status = 'started';
-        while (!['completed', 'failed', 'not_found'].includes(status)) {
-            await new Promise(r => setTimeout(r, 1000));
-            const statusData = await getJobStatus(selectedProjectId, jobId);
+export async function pollJobStatus(projectId: string, jobId: string, reloadRecentRuns: () => Promise<void>) {
+    let status = 'started';
+    while (!['completed', 'failed', 'not_found'].includes(status)) {
+        await new Promise(r => setTimeout(r, 1000));
+        try {
+            const statusData = await getJobStatus(projectId, jobId);
             status = statusData.status;
 
             let counts: Record<string, number> = {};
@@ -46,7 +42,6 @@ export async function handleStartExperiment(selectedProjectId: string, reloadRec
             }
 
             jobStore.set({
-                ...jobStore,
                 currentJob: jobId,
                 jobStatus: status,
                 jobDetails: statusData,
@@ -58,12 +53,57 @@ export async function handleStartExperiment(selectedProjectId: string, reloadRec
             } else if (status === 'failed') {
                 break;
             }
+        } catch (error) {
+            console.error('Error polling job status:', error);
+            break;
         }
+    }
+}
+
+export async function handleStartExperiment(selectedProjectId: string, reloadRecentRuns: () => Promise<void>) {
+    pendingRunStore.set({
+        type: 'experiment',
+        projectId: selectedProjectId
+    });
+    goto('/');
+}
+
+export async function handleRerunTask(projectId: string, challengeId: string, reloadRecentRuns: () => Promise<void>) {
+    pendingRunStore.set({
+        type: 'task',
+        projectId,
+        challengeId
+    });
+    goto('/');
+}
+
+export async function executePendingRun(reloadRecentRuns: () => Promise<void>) {
+    const pendingRun = get(pendingRunStore);
+    if (!pendingRun) return;
+    
+    try {
+        const data = pendingRun.type === 'experiment' 
+            ? await startExperiment(pendingRun.projectId)
+            : await startSingleTask(pendingRun.projectId, pendingRun.challengeId!);
+            
+        const jobId = data.job_id;
+
+        jobStore.update(state => ({
+            ...state,
+            currentJob: jobId,
+            jobStatus: 'started',
+            jobDetails: null,
+            taskStatusCounts: {},
+        }));
+
+        await pollJobStatus(pendingRun.projectId, jobId, reloadRecentRuns);
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error executing pending run:', error);
         jobStore.update(state => ({
             ...state,
             jobStatus: 'error',
         }));
+    } finally {
+        pendingRunStore.set(null);
     }
 }

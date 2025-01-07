@@ -11,6 +11,8 @@
     import KeyAlerts from '$lib/components/KeyAlerts.svelte';
     import type { KeyAlert } from '$lib/types/alerts';
     import ErrorDisplay from '$lib/components/ErrorDisplay.svelte';
+    import { handleStartExperiment, jobStore, pollJobStatus, pendingRunStore, executePendingRun } from '$lib/stores/jobs';
+    import { getJobStatus } from '$lib/api';
     // import EvalScoreTrend from '$lib/components/EvalScoreTrend.svelte';
     // import TestsDistributionTrend from '$lib/components/TestsDistributionTrend.svelte';
 
@@ -44,8 +46,22 @@
         }
     }
 
+    async function startPollingIfRunning() {
+        if ($jobStore.currentJob && $jobStore.jobStatus && !['completed', 'failed', 'error'].includes($jobStore.jobStatus)) {
+            await pollJobStatus($selectedProjectId, $jobStore.currentJob, loadRecentRuns);
+        }
+    }
+
+    async function handlePendingRun() {
+        if ($pendingRunStore) {
+            await executePendingRun(loadRecentRuns);
+        }
+    }
+
     $: if (currentProject) {
         loadRecentRuns();
+        startPollingIfRunning();
+        handlePendingRun();
     }
 
     const alerts: KeyAlert[] = [];

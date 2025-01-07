@@ -13,13 +13,14 @@ from ..utils.git import get_git_revision
 from .utils import rephrase_input
 
 
-def run_experiment(project_config: Dict[str, Any], job: JobModel):
+def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: str | None = None):
     """
     Run an experiment using the task_runner.run_task function from the project folder
 
     Args:
         project_config: Project configuration dictionary containing folder path
         job: JobModel instance for the job being run
+        challenge_id: If provided, only run the task with this challenge ID
 
     Yields:
         Dict containing status updates, final results, and status map
@@ -39,6 +40,12 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel):
 
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
+
+    # If challenge_id is provided, filter tasks to only include the specified task
+    if challenge_id:
+        config["tasks"] = [task for task in config["tasks"] if task.get("id") == challenge_id]
+        if not config["tasks"]:
+            raise ValueError(f"No task found with challenge ID {challenge_id}")
 
     # Construct path to task_runner.py
     task_runner_path = project_folder / ".multinear" / "task_runner.py"
@@ -66,7 +73,7 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel):
         for task in config["tasks"]:
             # Get number of repeats for this task (default to 1)
             repeats = task.get("repeat", 1)
-            
+
             # Initialize variations tracking for this task
             if task.get("rephrase", False):
                 previous_variations = []

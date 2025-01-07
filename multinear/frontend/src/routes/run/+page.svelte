@@ -7,7 +7,7 @@
     import { Label } from "$lib/components/ui/label";
     import { Input } from "$lib/components/ui/input";
     import { formatDuration, intervalToDuration } from 'date-fns';
-    import { ChevronRight } from 'lucide-svelte';
+    import { ChevronRight, Play } from 'lucide-svelte';
     import TimeAgo from '$lib/components/TimeAgo.svelte';
     import StatusFilter from '$lib/components/StatusFilter.svelte';
     import { filterTasks, getStatusCounts, getTaskStatus, truncateInput } from '$lib/utils/tasks';
@@ -17,6 +17,7 @@
     import Loading from '$lib/components/Loading.svelte';
     import ErrorDisplay from '$lib/components/ErrorDisplay.svelte';
     import StatusBadge from '$lib/components/StatusBadge.svelte';
+    import { handleStartExperiment, jobStore, handleRerunTask } from '$lib/stores/jobs';
 
     let runId: string | null = null;
     let runDetails: any = null;
@@ -104,6 +105,34 @@
         } else if (event.key === 'k') {
             expandPreviousTask();
         }
+    }
+
+    async function loadRecentRuns() {
+        // No-op since we don't need to reload runs in this view
+    }
+
+    async function handleRerunTaskClick(task: any) {
+        try {
+            await handleRerunTask(runDetails.project.id, task.challenge_id, loadRecentRuns);
+            goto('/');
+        } catch (error) {
+            console.error('Error rerunning task:', error);
+        }
+    }
+
+    function formatTimeInterval(start: string, end: string): string {
+        const duration = intervalToDuration({
+            start: new Date(start),
+            end: new Date(end)
+        });
+
+        if (duration.minutes || duration.seconds) {
+            return formatDuration(duration, { 
+                format: ['minutes', 'seconds'] 
+            });
+        }
+
+        return '<1 second';
     }
 </script>
 
@@ -213,13 +242,7 @@
                                     </Table.Cell>
                                     <Table.Cell>
                                         {#if task.finished_at}
-                                            {formatDuration(
-                                                intervalToDuration({
-                                                    start: new Date(task.created_at),
-                                                    end: new Date(task.finished_at)
-                                                }),
-                                                { format: ['minutes', 'seconds'] }
-                                            )}
+                                            {formatTimeInterval(task.created_at, task.finished_at)}
                                         {:else}
                                             -
                                         {/if}
@@ -251,20 +274,17 @@
                                             <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <!-- Task Details Column -->
                                                 <div class="space-y-4 pr-12 border-r border-gray-200">
-                                                    <div class="flex justify-between items-center mb-2">
-                                                        <h4 class="font-semibold text-lg">Task Details</h4>
-                                                        <div class="text-sm text-gray-800">
-                                                            Duration: 
-                                                            {#if task.task_details?.duration}
-                                                                {formatDuration(
-                                                                    intervalToDuration({
-                                                                        start: new Date(task.executed_at),
-                                                                        end: new Date(task.finished_at)
-                                                                    }),
-                                                                    { format: ['minutes', 'seconds'] }
-                                                                )}
-                                                            {/if}
-                                                        </div>
+                                                    <div class="flex items-center mb-2">
+                                                        <h4 class="font-semibold text-lg">
+                                                            Task Details 
+                                                            <span class="text-sm font-normal text-gray-800 ml-2">
+                                                                {#if task.finished_at}
+                                                                    (time: {formatTimeInterval(task.created_at, task.finished_at)})
+                                                                {:else}
+                                                                    -
+                                                                {/if}
+                                                            </span>
+                                                        </h4>
                                                     </div>
 
                                                     {#if task.task_input}
@@ -352,23 +372,18 @@
 
                                                 <!-- Evaluation Details Column -->
                                                 <div class="space-y-4 pl-4">
-                                                    <div class="flex justify-between items-center mb-2">
-                                                        <h4 class="font-semibold text-lg">Evaluation</h4>
-                                                        <div class="flex items-center gap-4">
-                                                            <div class="text-sm text-gray-800">
-                                                                Duration: 
+                                                    <div class="flex items-center mb-2">
+                                                        <h4 class="font-semibold text-lg">
+                                                            Evaluation
+                                                            <span class="text-sm font-normal text-gray-800 ml-2">
                                                                 {#if task.evaluated_at}
-                                                                    {formatDuration(
-                                                                        intervalToDuration({
-                                                                            start: new Date(task.executed_at),
-                                                                            end: new Date(task.evaluated_at)
-                                                                        }),
-                                                                        { format: ['minutes', 'seconds'] }
-                                                                    )}
+                                                                    (time: {formatTimeInterval(task.executed_at, task.evaluated_at)})
                                                                 {:else}
                                                                     -
                                                                 {/if}
-                                                            </div>
+                                                            </span>
+                                                        </h4>
+                                                        <div class="flex items-center gap-4 ml-auto">
                                                             <div class="text-sm text-gray-800">
                                                                 Score: {(task.eval_score * 100).toFixed(0)}%
                                                             </div>
@@ -376,6 +391,15 @@
                                                                 ${task.eval_passed ? 'status-completed' : 'status-failed'}`}>
                                                                 {task.eval_passed ? 'PASSED' : 'FAILED'}
                                                             </div>
+                                                            <Button 
+                                                                variant="primary" 
+                                                                size="sm"
+                                                                class="flex items-center gap-2 text-sm transition-colors"
+                                                                on:click={() => handleRerunTaskClick(task)}
+                                                            >
+                                                                <Play class="h-3 w-3" />
+                                                                Re-run
+                                                            </Button>
                                                         </div>
                                                     </div>
                                                     

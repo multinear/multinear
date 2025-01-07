@@ -13,7 +13,7 @@ from ..engine.run import run_experiment
 from ..engine.storage import ProjectModel, JobModel, TaskModel, TaskStatus
 
 
-def background_job(project_id: str, job_id: str):
+def background_job(project_id: str, job_id: str, challenge_id: str | None = None):
     """
     Execute a background job to run an experiment for the specified project.
 
@@ -26,6 +26,7 @@ def background_job(project_id: str, job_id: str):
     Args:
         project_id (str): The ID of the project.
         job_id (str): The ID of the job to execute.
+        challenge_id (str | None): If provided, only run the task with this challenge ID.
     """
     try:
         # Retrieve the project and job from the database
@@ -33,7 +34,7 @@ def background_job(project_id: str, job_id: str):
         job = JobModel.find(job_id)
 
         # Run the experiment and handle status updates
-        for update in run_experiment(project.to_dict(), job):
+        for update in run_experiment(project.to_dict(), job, challenge_id):
             # Add status map from TaskModel to the update
             update["status_map"] = TaskModel.get_status_map(job_id)
 
@@ -345,3 +346,39 @@ async def get_same_tasks(
     # Retrieve tasks that have the specified challenge ID within the project
     tasks = TaskModel.find_same_tasks(project_id, challenge_id, limit, offset)
     return [_get_task_details(task) for task in tasks]
+
+
+@api_router.post("/jobs/{project_id}/task/{challenge_id}")
+async def run_single_task(
+    project_id: str,
+    challenge_id: str,
+    background_tasks: BackgroundTasks,
+):
+    """
+    Start a new job that runs only a single task with the specified challenge ID.
+
+    Args:
+        project_id (str): The ID of the project.
+        challenge_id (str): The challenge ID of the task to run.
+        background_tasks: FastAPI background tasks handler.
+
+    Returns:
+        JobResponse: Details of the created job.
+    """
+    # Verify that the project exists
+    project = ProjectModel.find(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Create a new job
+    job_id = JobModel.start(project_id)
+
+    # Start the background task
+    background_tasks.add_task(background_job, project_id, job_id, challenge_id)
+
+    return {
+        "project_id": project_id,
+        "job_id": job_id,
+        "status": "started",
+        "total_tasks": 1,
+    }

@@ -103,3 +103,16 @@ export async function getSameTasks(projectId: string, challengeId: string, limit
     }
     return response.json();
 }
+
+export async function startSingleTask(projectId: string, challengeId: string): Promise<JobResponse> {
+    const response = await fetch(`${API_URL}/jobs/${projectId}/task/${challengeId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to start task: ${response.statusText}`);
+    }
+    return response.json();
+}
