@@ -65,6 +65,10 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
     if not hasattr(task_runner_module, "run_task"):
         raise AttributeError(f"run_task function not found in {task_runner_path}")
 
+    # Run start_run if it exists
+    if hasattr(task_runner_module, "start_run"):
+        task_runner_module.start_run()
+
     # Run the experiment
     try:
         results = []
@@ -142,6 +146,9 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
                         "total": total_tasks,
                         "details": f"Evaluating task {current_task}/{total_tasks}"
                     }
+
+                    # Inject global context into the task
+                    task["context"] = config.get("meta", {}).get("context", "")
 
                     # Evaluate the task
                     with OutputCapture() as capture:

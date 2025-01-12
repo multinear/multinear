@@ -17,9 +17,11 @@ def evaluate(spec: dict, input: any, output: any):
     # Set the minimum score required to pass
     min_score = spec.get('min_score', 1.0)
 
+    context = spec.get('context', '')
+
     evaluator = None
     if 'checklist' in spec:
-        evaluator = ChecklistClassifier2()
+        evaluator = ChecklistClassifier2(context=context)
         result = evaluator(output, spec['checklist'], input=input)
     elif 'list' in spec:
         evaluator = ListEvaluator(spec['list'])

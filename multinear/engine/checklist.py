@@ -64,7 +64,7 @@ class ChecklistClassifier2(OpenAILLMClassifier):
     criterion.
     """
 
-    def __init__(self, model=DEFAULT_MODEL, **kwargs):
+    def __init__(self, model=DEFAULT_MODEL, context="", **kwargs):
         # Define the conversation messages
         messages = [
             {
@@ -75,7 +75,9 @@ Return criterion verbatim, exactly as it is in the checklist."""
             },
             {
                 "role": "user",
-                "content": """Please evaluate this submission against each checklist item:
+                "content": """Please evaluate this submission against each checklist item.
+
+{{context}}
 
 Question: {{input}}
 
@@ -139,6 +141,7 @@ Evaluate each checklist item individually, providing a score and detailed ration
             model=model,
             classification_tools=tools,
             choice_scores={"evaluate_checklist": 1},  # Required by parent class
+            render_args={"context": context},
             **kwargs
         )
 

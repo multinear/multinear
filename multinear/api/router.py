@@ -212,7 +212,7 @@ async def get_recent_runs(
                     if job.finished_at
                     else None
                 ),
-                "revision": job_data.get("git_revision", ""),
+                "revision": job_data.get("git_revision") or "",
                 "model": model,
                 "score": score,
                 "totalTests": total,
