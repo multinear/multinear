@@ -32,3 +32,10 @@ frontend_build:
 .PHONY: frontend_dev
 frontend_dev:
 	cd multinear/frontend && npm run dev
+
+# Build: 
+# 	1. make frontend_build
+#	2. update pyproject.toml + setup.py <version>
+# 	3. python -m build
+#	4. twine upload dist/*
+#	5. git tag <version>
