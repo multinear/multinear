@@ -158,13 +158,36 @@ Evaluate each checklist item individually, providing a score and detailed ration
 
         # Parse the arguments returned by the function call
         result = json.loads(tool_call["function"]["arguments"])
+        evaluations = result["evaluations"]
+
+        if not isinstance(self._original_checklist, str):
+            # Calculate overall score based on individual criteria
+            total_score = 0
+            for eval in evaluations:
+                score = eval["score"]
+                # Find matching checklist item to check for min_score
+                for item in self._original_checklist:
+                    if isinstance(item, dict):
+                        criterion_text = item["text"]
+                        if criterion_text == eval["criterion"]:
+                            min_score = item.get('min_score')
+                            if min_score is not None and score >= min_score:
+                                score = 1.0
+                            break
+
+                total_score += score
+
+            overall_score = total_score / len(evaluations)
+        else:
+            # If the checklist is a string, use the overall score directly
+            overall_score = result["overall_score"]
 
         return Score(
             name=self.name,
-            score=result["overall_score"],
+            score=overall_score,
             metadata={
-                "evaluations": result["evaluations"],
-                "overall_score": result["overall_score"]
+                "evaluations": evaluations,
+                "overall_score": overall_score
             }
         )
 
@@ -172,6 +195,9 @@ Evaluate each checklist item individually, providing a score and detailed ration
         """
         Build the arguments for the LLM classifier, including parsing YAML if necessary.
         """
+        # Store original checklist for score processing
+        self._original_checklist = expected
+
         # Parse the YAML checklist if it's provided as a string
         if isinstance(expected, str):
             try:
@@ -181,7 +207,14 @@ Evaluate each checklist item individually, providing a score and detailed ration
 
         # Convert list to YAML string for template rendering
         if isinstance(expected, list):
-            expected = yaml.dump(expected)
+            simplified_checklist = []
+            for item in expected:
+                if isinstance(item, dict):
+                    criterion_text = item["text"]
+                    simplified_checklist.append(criterion_text)
+                else:
+                    simplified_checklist.append(item)
+            expected = yaml.dump(simplified_checklist)
 
         args = super()._build_args(output=output, expected=expected, **kwargs)
         args["tool_choice"] = {"type": "function", "function": {"name": "evaluate_checklist"}}
