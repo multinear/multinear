@@ -48,6 +48,7 @@
 
     let statusFilter = "";
     let searchTerm = "";
+    let evaluationFilter = "";
     
     $: filteredTasks = filterTasks(runDetails?.tasks || [], statusFilter, searchTerm);
     $: statusCounts = getStatusCounts(runDetails?.tasks || []);
@@ -262,10 +263,19 @@
                                     </Table.Cell>
                                     <Table.Cell>
                                         <div class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 overflow-hidden flex">
-                                            <div
-                                                class="h-4 min-w-[5px] {isPassed ? 'bg-green-600' : 'bg-red-600'}"
-                                                style="width: {(task.eval_score * 100).toFixed(0)}%"
-                                            ></div>
+                                            {#if task.eval_details?.evaluations}
+                                                {#each task.eval_details.evaluations as ev}
+                                                    <div
+                                                        class="h-4 min-w-[5px] {ev.score >= 1 ? 'bg-green-600' : ev.score > 0 ? 'bg-yellow-400' : 'bg-red-600'}"
+                                                        style="width: {(1 / task.eval_details.evaluations.length * 100).toFixed(0)}%"
+                                                    ></div>
+                                                {/each}
+                                            {:else}
+                                                <div
+                                                    class="h-4 min-w-[5px] {isPassed ? 'bg-green-600' : 'bg-red-600'}"
+                                                    style="width: {(task.eval_score * 100).toFixed(0)}%"
+                                                ></div>
+                                            {/if}
                                         </div>
                                         <div class="text-center text-xs font-medium">
                                             {(task.eval_score * 100).toFixed(0)}%
@@ -457,9 +467,45 @@
                                                     
                                                     {#if task.eval_details?.evaluations}
                                                         <div>
-                                                            <h4 class="font-semibold text-lg mb-3">Evaluation Results</h4>
+                                                            <div class="flex items-center justify-between mb-3">
+                                                                <h4 class="font-semibold text-lg">Evaluation Results</h4>
+                                                                {#if (task.eval_details.evaluations.some((ev: {score: number}) => ev.score >= 1) && 
+                                                                     task.eval_details.evaluations.some((ev: {score: number}) => ev.score < 1)) ||
+                                                                     evaluationFilter != ""}
+                                                                    <div class="flex gap-2">
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            class={evaluationFilter === "" ? 'bg-gray-100 border-gray-200' : ''}
+                                                                            on:click={() => evaluationFilter = ""}
+                                                                        >
+                                                                            All
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            class={evaluationFilter === "passed" ? 'bg-green-50 border-green-200 text-green-700' : ''}
+                                                                            on:click={() => evaluationFilter = "passed"}
+                                                                        >
+                                                                            Passed
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            class={evaluationFilter === "failed" ? 'bg-red-50 border-red-200 text-red-700' : ''}
+                                                                            on:click={() => evaluationFilter = "failed"}
+                                                                        >
+                                                                            Failed
+                                                                        </Button>
+                                                                    </div>
+                                                                {/if}
+                                                            </div>
                                                             <div class="space-y-4 divide-y divide-gray-100">
-                                                                {#each task.eval_details.evaluations as ev}
+                                                                {#each task.eval_details.evaluations.filter((ev: { score: number }) => 
+                                                                    evaluationFilter === "" || 
+                                                                    (evaluationFilter === "passed" && ev.score >= 1) ||
+                                                                    (evaluationFilter === "failed" && ev.score < 1)
+                                                                ) as ev}
                                                                     <div class="pt-4 first:pt-0">
                                                                         <div class="flex items-center gap-3">
                                                                             <div class="flex-none flex items-center justify-center w-9 h-9 rounded-full border
