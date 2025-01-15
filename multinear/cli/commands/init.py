@@ -10,6 +10,21 @@ def add_parser(subparsers):
     parser.set_defaults(func=handle)
 
 
+def _get_validated_input(prompt: str, default: str = None, required: bool = True) -> str:
+    """Get and validate user input with optional default value."""
+    console = Console()
+    while True:
+        display_prompt = f"{prompt} [{default}]: " if default else f"{prompt}: "
+        value = input(display_prompt).strip()
+
+        if default and not value:
+            return default
+        if value or not required:
+            return value
+
+        console.print(f"[red]{prompt} cannot be empty[/red]")
+
+
 def handle(args):
     MULTINEAR_CONFIG_DIR = '.multinear'
     console = Console()
@@ -26,11 +41,10 @@ def handle(args):
     # Create the .multinear directory for project configuration
     multinear_dir.mkdir()
 
-    # Prompt the user for project details
-    project_name = input("Project name: ").strip()
-    default_id = slugify(project_name)
-    project_id = input(f"Project ID [{default_id}]: ").strip() or default_id
-    description = input("Project description: ").strip()
+    # Prompt the user for project details (with validation)
+    project_name = _get_validated_input("Project name")
+    project_id = _get_validated_input("Project ID", default=slugify(project_name))
+    description = _get_validated_input("Project description")
 
     # Read the configuration template
     template_path = Path(__file__).parent.parent.parent / 'templates' / 'config.yaml'

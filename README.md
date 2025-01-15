@@ -83,7 +83,9 @@ tasks:
       - The output should be in English.
       - The response should be polite.
       - The response should be less than 500 words.
-    min_score: 0.6  # Overall score, some checklist items can completely fail, and still pass if the majority pass ( in this case, 2/3 items will pass)
+    # Overall score, some checklist items can completely fail, and still pass if the majority pass
+    # (in this case, 2/3 items will pass)
+    min_score: 0.6
   - id: task2
     input: "Input data for task 2"
     checklist:
