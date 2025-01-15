@@ -54,7 +54,7 @@ Example `task_runner.py`:
 ```python
 def run_task(input):
     # Your GenAI-powered application logic here
-    output = my_application.process(input)
+    output = my_application.process(input)  # If your app is standalone, expose an API and call it here to get the output
     details = {'model': 'gpt-4o'}
     return {'output': output, 'details': details}
 ```
@@ -71,19 +71,25 @@ project:
   name: My GenAI Project
   description: Experimenting with GenAI models
 
+meta:
+  context: |
+    This is a global context that will be injected into each task evaluation.
+    It's important to include any useful information that may be needed to evaluate each result.
+
 tasks:
   - id: task1
-    input: "Input data for task 1"
+    input: Input data for task 1
     checklist:
-      - "The output should be in English."
-      - "The response should be polite."
-    min_score: 0.8
+      - The output should be in English.
+      - The response should be polite.
+    min_score: 0.8  # Overall score, some checklist items can completely fail, and still pass if the majority pass
   - id: task2
     input: "Input data for task 2"
     checklist:
-      - "The output should include at least two examples."
-      - "The response should be less than 500 words."
-    min_score: 1
+      - The output should include at least two examples.
+      - The response should be less than 500 words.
+      - text: Tests can have individual minimum scores, as sometimes it's hard to compose an assertion that is both comprehensive and easy to evaluate.
+        min_score: 0.5  # Individual checklist item score
 ```
 
 ### Running Experiments
