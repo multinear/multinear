@@ -1,10 +1,11 @@
 prune **/node_modules
 prune **/__pycache__
+prune **/multinear/frontend/.svelte-kit
 recursive-include multinear/templates *
 recursive-include multinear/frontend/build *
-recursive-include multinear/frontend/.svelte-kit *
 global-exclude node_modules
 global-exclude .env
 global-exclude *.pyc
 global-exclude __pycache__
 global-exclude .svelte-kit
+global-exclude **/.svelte-kit/**

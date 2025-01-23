@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name='multinear',
     version='0.1.3',
-    packages=find_packages(),
+    packages=find_packages(exclude=['*.frontend*', '*.templates*']),
     include_package_data=True,
     entry_points={
         'console_scripts': [
@@ -34,9 +34,14 @@ setup(
     python_requires='>=3.8',
     package_data={
         'multinear': [
-            'frontend/build/*',
             'frontend/build/**/*',
             'templates/*',
+        ],
+    },
+    exclude_package_data={
+        'multinear': [
+            'frontend/.svelte-kit/**/*',
+            'frontend/**/.svelte-kit/**/*',
         ],
     },
 )
