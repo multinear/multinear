@@ -527,6 +527,7 @@
                                                                     evaluations={task.eval_details.evaluations}
                                                                     evalSpec={task.eval_spec}
                                                                     showFilter={false}
+                                                                    filter={evaluationFilter}
                                                                 />
                                                             </div>
                                                         </div>
