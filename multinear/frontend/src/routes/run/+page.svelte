@@ -7,7 +7,7 @@
     import { Label } from "$lib/components/ui/label";
     import { Input } from "$lib/components/ui/input";
     import { formatDuration, intervalToDuration } from 'date-fns';
-    import { ChevronRight, Play, AlertCircle } from 'lucide-svelte';
+    import { ChevronRight, Play } from 'lucide-svelte';
     import TimeAgo from '$lib/components/TimeAgo.svelte';
     import StatusFilter from '$lib/components/StatusFilter.svelte';
     import { filterTasks, getStatusCounts, getTaskStatus, truncateInput } from '$lib/utils/tasks';
@@ -17,10 +17,30 @@
     import Loading from '$lib/components/Loading.svelte';
     import ErrorDisplay from '$lib/components/ErrorDisplay.svelte';
     import StatusBadge from '$lib/components/StatusBadge.svelte';
-    import { handleStartExperiment, jobStore, handleRerunTask } from '$lib/stores/jobs';
+    import { handleRerunTask } from '$lib/stores/jobs';
     import { marked } from 'marked';
     import { Switch } from "$lib/components/ui/switch";
-    import * as Alert from "$lib/components/ui/alert";
+
+    function getScoreStyles(score: number): { color: string, border: string, text: string } {
+        if (score >= 1) {
+            return { 
+                color: 'status-completed', 
+                border: 'status-completed-border',
+                text: 'text-green-600'
+            };
+        } else if (score >= 0.5) {
+            return { 
+                color: 'status-default', 
+                border: 'status-default-border',
+                text: 'text-yellow-500'
+            };
+        }
+        return { 
+            color: 'status-failed', 
+            border: 'status-failed-border',
+            text: 'text-red-600'
+        };
+    }
 
     let runId: string | null = null;
     let runDetails: any = null;
@@ -526,15 +546,27 @@
                                                                     (evaluationFilter === "passed" && ev.score >= 1) ||
                                                                     (evaluationFilter === "failed" && ev.score < 1)
                                                                 ) as ev}
+                                                                    {@const minScore = task.eval_spec?.checklist?.find((item: { text: string; min_score?: number }) => 
+                                                                        typeof item === 'object' && 
+                                                                        item.text === ev.criterion
+                                                                    )?.min_score}
+                                                                    {@const normalizedScore = minScore ? (ev.score / minScore) : ev.score}
                                                                     <div class="pt-4 first:pt-0">
                                                                         <div class="flex items-center gap-3">
-                                                                            <div class="flex-none flex items-center justify-center w-9 h-9 rounded-full border
-                                                                                {ev.score >= 1 ? 'status-completed status-completed-border' : 
-                                                                                ev.score > 0 ? 'status-default status-default-border' : 
-                                                                                'status-failed status-failed-border'}">
-                                                                                <span class="text-xs font-medium leading-none">
-                                                                                    {(ev.score * 100).toFixed(0)}%
-                                                                                </span>
+                                                                            <div class="relative flex flex-col items-center" style="min-height: 48px">
+                                                                                <div class="flex-none flex items-center justify-center w-9 h-9 rounded-full border
+                                                                                    {getScoreStyles(normalizedScore).color} {getScoreStyles(normalizedScore).border}">
+                                                                                    <span class="text-xs font-medium leading-none">
+                                                                                        {(ev.score * 100).toFixed(0)}%
+                                                                                    </span>
+                                                                                </div>
+                                                                                {#if minScore}
+                                                                                    <div class="mt-1">
+                                                                                        <span class="text-[10px] font-medium {getScoreStyles(ev.score).text}">
+                                                                                            min: {(minScore * 100).toFixed(0)}%
+                                                                                        </span>
+                                                                                    </div>
+                                                                                {/if}
                                                                             </div>
                                                                             <div class="text-sm font-medium flex-1">{ev.criterion}</div>
                                                                         </div>

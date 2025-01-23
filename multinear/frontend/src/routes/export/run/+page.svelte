@@ -57,6 +57,11 @@
         }
     }
 
+    function truncateText(text: string, maxLength: number = 500): string {
+        if (text.length <= maxLength) return text;
+        return text.slice(0, maxLength) + '...';
+    }
+
     // Calculate task statistics
     $: taskStats = runDetails?.tasks ? {
         total: runDetails.tasks.length,
@@ -66,10 +71,25 @@
         avgScore: runDetails.tasks.reduce((acc: number, t: Task) => acc + (t.eval_score || 0), 0) / runDetails.tasks.length
     } : null;
 
-    function getScoreColor(score: number): string {
-        if (score >= 0.9) return 'status-completed status-completed-border print:bg-green-50';
-        if (score > 0) return 'status-default status-default-border print:bg-yellow-50';
-        return 'status-failed status-failed-border print:bg-red-50';
+    function getScoreStyles(score: number): { color: string, border: string, text: string } {
+        if (score >= 1) {
+            return { 
+                color: 'status-completed status-completed-border print:bg-green-50', 
+                border: 'status-completed-border',
+                text: 'text-green-600'
+            };
+        } else if (score >= 0.5) {
+            return { 
+                color: 'status-default status-default-border print:bg-yellow-50', 
+                border: 'status-default-border',
+                text: 'text-yellow-500'
+            };
+        }
+        return { 
+            color: 'status-failed status-failed-border print:bg-red-50', 
+            border: 'status-failed-border',
+            text: 'text-red-600'
+        };
     }
 </script>
 
@@ -166,7 +186,7 @@
                             <StatusBadge status={task.status} className="px-3 py-1" />
                             {#if task.eval_score !== null}
                                 <div class="flex-none flex items-center justify-center w-9 h-9 rounded-full border
-                                    {getScoreColor(task.eval_score)}">
+                                    {getScoreStyles(task.eval_score).color}">
                                     <span class="text-xs font-medium leading-none">
                                         {(task.eval_score * 100).toFixed(0)}%
                                     </span>
@@ -210,7 +230,9 @@
                                                 <div>
                                                     <div class="text-sm font-medium text-gray-600 mb-1">{key}</div>
                                                     <div class="bg-gray-50 p-3 rounded border border-gray-200 whitespace-pre-wrap font-mono text-xs">
-                                                        {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                                                        {typeof value === 'string' 
+                                                            ? (key === 'prompt' ? truncateText(value) : value)
+                                                            : JSON.stringify(value, null, 2)}
                                                     </div>
                                                 </div>
                                             {/each}
@@ -226,13 +248,27 @@
                                         <h4 class="text-sm font-semibold mb-3">Evaluation Results</h4>
                                         <div class="space-y-4 divide-y divide-gray-100">
                                             {#each task.eval_details.evaluations as ev}
+                                                {@const minScore = task.eval_spec?.checklist?.find((item: { text: string; min_score?: number }) => 
+                                                    typeof item === 'object' && 
+                                                    item.text === ev.criterion
+                                                )?.min_score}
+                                                {@const normalizedScore = minScore ? (ev.score / minScore) : ev.score}
                                                 <div class="print:break-inside-avoid pt-4 first:pt-0">
                                                     <div class="flex items-center gap-3">
-                                                        <div class="flex-none flex items-center justify-center w-9 h-9 rounded-full border
-                                                            {getScoreColor(ev.score)}">
-                                                            <span class="text-xs font-medium leading-none">
-                                                                {(ev.score * 100).toFixed(0)}%
-                                                            </span>
+                                                        <div class="relative flex flex-col items-center" style="min-height: 48px">
+                                                            <div class="flex-none flex items-center justify-center w-9 h-9 rounded-full border
+                                                                {getScoreStyles(normalizedScore).color}">
+                                                                <span class="text-xs font-medium leading-none">
+                                                                    {(ev.score * 100).toFixed(0)}%
+                                                                </span>
+                                                            </div>
+                                                            {#if minScore}
+                                                                <div class="mt-1">
+                                                                    <span class="text-[10px] font-medium {getScoreStyles(ev.score).text}">
+                                                                        min: {(minScore * 100).toFixed(0)}%
+                                                                    </span>
+                                                                </div>
+                                                            {/if}
                                                         </div>
                                                         <div class="text-sm font-medium flex-1">{ev.criterion}</div>
                                                     </div>

@@ -60,34 +60,4 @@
         initialSearchTerm={localSearchTerm}
     />
 
-    <!-- <div class="grid gap-4 pt-8">
-        {#each runs.slice(0, 2) as run (run.id)}
-            <Card.Root class="hover:bg-gray-50 transition-colors">
-                <button
-                    class="w-full text-left"
-                    on:click={() => handleRunSelect(run.id)}
-                >
-                    <Card.Header>
-                        <Card.Title class="flex justify-between items-center">
-                            <span>{run.model}</span>
-                            <span class="text-sm text-gray-500">{new Date(run.created_at).toLocaleDateString()}</span>
-                        </Card.Title>
-                        <Card.Description>
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    Revision: {run.revision}
-                                </div>
-                                <div class="flex gap-4">
-                                    <span class="text-green-600">Pass: {run.pass}</span>
-                                    <span class="text-red-600">Fail: {run.fail}</span>
-                                    <span class="text-orange-600">Regression: {run.regression}</span>
-                                </div>
-                            </div>
-                        </Card.Description>
-                    </Card.Header>
-                </button>
-            </Card.Root>
-        {/each}
-    </div> -->
-
 </div>
