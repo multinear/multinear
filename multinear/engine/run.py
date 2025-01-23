@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 from typing import Dict, Any
+from rich.console import Console
 import yaml
 import random
 import hashlib
@@ -67,6 +68,9 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
             spec.loader.exec_module(task_runner_module)
         except Exception as e:
             error_msg = f"Failed to load task_runner.py: {str(e)}"
+            console = Console()
+            console.print(f"[red bold]{error_msg}[/red bold]")
+            console.print_exception()
             job.update(
                 status=TaskStatus.FAILED,
                 details={
@@ -106,6 +110,9 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
                 task_runner_module.start_run()
             except Exception as e:
                 error_msg = f"Error in start_run: {str(e)}"
+                console = Console()
+                console.print(f"[red bold]{error_msg}[/red bold]")
+                console.print_exception()
                 job.update(
                     status=TaskStatus.FAILED,
                     details={
@@ -221,9 +228,9 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
 
                 except Exception as e:
                     error_msg = str(e)
-                    print(
-                        f"Error running task {current_task}/{total_tasks}: {error_msg}"
-                    )
+                    console = Console()
+                    console.print(f"[red bold]Error running task {current_task}/{total_tasks}:[/red bold] {error_msg}")
+                    console.print_exception()
                     results.append({"error": error_msg})
                     TaskModel.fail(task_id, error=error_msg)
                     # Update job details with the error
@@ -244,7 +251,9 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
 
     except Exception as e:
         error_msg = str(e)
-        print(f"Error running experiment: {error_msg}")
+        console = Console()
+        console.print(f"[red bold]Error running experiment:[/red bold] {error_msg}")
+        console.print_exception()
         yield {
             "status": TaskStatus.FAILED,
             "total": 0,
