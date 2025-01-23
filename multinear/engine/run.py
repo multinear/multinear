@@ -39,6 +39,9 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
         print(f"Git revision: {git_revision}")
         job.update(details={"git_revision": get_git_revision(project_folder)})
 
+        if not config_path.exists():
+            raise FileNotFoundError(f"Config file not found at {config_path}")
+
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
 

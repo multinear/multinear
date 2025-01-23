@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from rich.console import Console
 import uvicorn
@@ -17,36 +18,50 @@ def add_parser(subparsers):
         parser.add_argument(
             '--host', type=str, default='127.0.0.1', help='Host to run the server on'
         )
+        parser.add_argument('--debug', action='store_true', help='Show debug information on errors')
 
 
 def handle(args):
-    project = get_current_project()
-    if not project:
-        return
+    try:
+        project = get_current_project()
+        if not project:
+            return
 
-    uvicorn_config = {
-        "app": "multinear.main:app",
-        "host": args.host,
-        "port": args.port,
-    }
+        uvicorn_config = {
+            "app": "multinear.main:app",
+            "host": args.host,
+            "port": args.port,
+        }
 
-    if args.command == 'web_dev':
-        # Add project directories to watch list for auto-reload
-        current_dir = Path(__file__).parent.parent
-        parent_dir = str(current_dir.parent)
-        cwd = str(Path.cwd())
-        uvicorn_config.update({
-            "reload": True,
-            "reload_dirs": [parent_dir, cwd],
-            "reload_includes": ["*.py", "*.yaml"]
-        })
+        if args.command == 'web_dev':
+            # Add project directories to watch list for auto-reload
+            current_dir = Path(__file__).parent.parent
+            parent_dir = str(current_dir.parent)
+            cwd = str(Path.cwd())
+            uvicorn_config.update({
+                "reload": True,
+                "reload_dirs": [parent_dir, cwd],
+                "reload_includes": ["*.py", "*.yaml"]
+            })
 
-    console = Console()
-    mode = 'development' if args.command == 'web_dev' else 'production'
-    console.print(f"Starting {mode} server on {args.host}:{args.port}")
+        console = Console()
+        mode = 'development' if args.command == 'web_dev' else 'production'
+        console.print(f"Starting {mode} server on {args.host}:{args.port}")
 
-    # Run the Uvicorn server with the specified configuration
-    uvicorn.run(**uvicorn_config)
+        # Run the Uvicorn server with the specified configuration
+        uvicorn.run(**uvicorn_config)
+
+    except Exception as e:
+        console = Console()
+        console.print("[red bold]Error initializing Multinear:[/red bold]")
+
+        # Unknown errors
+        console.print("[red]An unexpected error occurred:[/red]")
+        console.print(f"[red]{str(e)}[/red]")
+        if "--debug" in sys.argv:
+            console.print_exception()
+
+        sys.exit(1)
 
 
 def handle_dev(args):

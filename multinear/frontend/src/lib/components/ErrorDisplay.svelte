@@ -3,7 +3,7 @@
     import { Button } from "$lib/components/ui/button";
 
     export let errorMessage: string;
-    export let onRetry: () => void;
+    export let onRetry: (() => void) | null = null;
     export let className: string = '';
 </script>
 

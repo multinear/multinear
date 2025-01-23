@@ -425,6 +425,10 @@ def init_project_db():
 
     # Read project configuration from the local .multinear/config.yaml
     config_path = current_dir / ".multinear" / "config.yaml"
+
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config file not found at {config_path}")
+
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
