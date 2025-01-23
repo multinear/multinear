@@ -36,6 +36,7 @@ setup(
         'multinear': [
             'frontend/build/*',
             'frontend/build/**/*',
+            'templates/*',
         ],
     },
 )
