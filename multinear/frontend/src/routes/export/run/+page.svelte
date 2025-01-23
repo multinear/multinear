@@ -9,6 +9,9 @@
     import Loading from '$lib/components/Loading.svelte';
     import ErrorDisplay from '$lib/components/ErrorDisplay.svelte';
     import StatusBadge from '$lib/components/StatusBadge.svelte';
+    import ScoreCircle from '$lib/components/ScoreCircle.svelte';
+    import EvaluationResults from '$lib/components/EvaluationResults.svelte';
+    import { truncateText } from '$lib/utils/scores';
 
     interface Task {
         id: string;
@@ -55,11 +58,6 @@
         } finally {
             loading = false;
         }
-    }
-
-    function truncateText(text: string, maxLength: number = 500): string {
-        if (text.length <= maxLength) return text;
-        return text.slice(0, maxLength) + '...';
     }
 
     // Calculate task statistics
@@ -185,12 +183,11 @@
                         <div class="flex items-center gap-4">
                             <StatusBadge status={task.status} className="px-3 py-1" />
                             {#if task.eval_score !== null}
-                                <div class="flex-none flex items-center justify-center w-9 h-9 rounded-full border
-                                    {getScoreStyles(task.eval_score).color}">
-                                    <span class="text-xs font-medium leading-none">
-                                        {(task.eval_score * 100).toFixed(0)}%
-                                    </span>
-                                </div>
+                                <ScoreCircle 
+                                    score={task.eval_score} 
+                                    includePrintStyles={true}
+                                    showMinScore={false}
+                                />
                             {/if}
                         </div>
                     </div>
@@ -246,36 +243,12 @@
                                 {#if task.eval_details?.evaluations}
                                     <div>
                                         <h4 class="text-sm font-semibold mb-3">Evaluation Results</h4>
-                                        <div class="space-y-4 divide-y divide-gray-100">
-                                            {#each task.eval_details.evaluations as ev}
-                                                {@const minScore = task.eval_spec?.checklist?.find((item: { text: string; min_score?: number }) => 
-                                                    typeof item === 'object' && 
-                                                    item.text === ev.criterion
-                                                )?.min_score}
-                                                {@const normalizedScore = minScore ? (ev.score / minScore) : ev.score}
-                                                <div class="print:break-inside-avoid pt-4 first:pt-0">
-                                                    <div class="flex items-center gap-3">
-                                                        <div class="relative flex flex-col items-center" style="min-height: 48px">
-                                                            <div class="flex-none flex items-center justify-center w-9 h-9 rounded-full border
-                                                                {getScoreStyles(normalizedScore).color}">
-                                                                <span class="text-xs font-medium leading-none">
-                                                                    {(ev.score * 100).toFixed(0)}%
-                                                                </span>
-                                                            </div>
-                                                            {#if minScore}
-                                                                <div class="mt-1">
-                                                                    <span class="text-[10px] font-medium {getScoreStyles(ev.score).text}">
-                                                                        min: {(minScore * 100).toFixed(0)}%
-                                                                    </span>
-                                                                </div>
-                                                            {/if}
-                                                        </div>
-                                                        <div class="text-sm font-medium flex-1">{ev.criterion}</div>
-                                                    </div>
-                                                    <div class="mt-1 text-sm text-gray-600">{ev.rationale}</div>
-                                                </div>
-                                            {/each}
-                                        </div>
+                                        <EvaluationResults 
+                                            evaluations={task.eval_details.evaluations}
+                                            evalSpec={task.eval_spec}
+                                            includePrintStyles={true}
+                                            showFilter={false}
+                                        />
                                     </div>
                                 {/if}
 

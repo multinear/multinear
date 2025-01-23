@@ -20,27 +20,9 @@
     import { handleRerunTask } from '$lib/stores/jobs';
     import { marked } from 'marked';
     import { Switch } from "$lib/components/ui/switch";
+    import EvaluationResults from '$lib/components/EvaluationResults.svelte';
+    import { truncateText } from '$lib/utils/scores';
 
-    function getScoreStyles(score: number): { color: string, border: string, text: string } {
-        if (score >= 1) {
-            return { 
-                color: 'status-completed', 
-                border: 'status-completed-border',
-                text: 'text-green-600'
-            };
-        } else if (score >= 0.5) {
-            return { 
-                color: 'status-default', 
-                border: 'status-default-border',
-                text: 'text-yellow-500'
-            };
-        }
-        return { 
-            color: 'status-failed', 
-            border: 'status-failed-border',
-            text: 'text-red-600'
-        };
-    }
 
     let runId: string | null = null;
     let runDetails: any = null;
@@ -507,7 +489,7 @@
                                                     
                                                     {#if task.eval_details?.evaluations}
                                                         <div>
-                                                            <div class="flex items-center justify-between mb-3">
+                                                            <div class="flex items-center justify-between">
                                                                 <h4 class="font-semibold text-lg">Evaluation Results</h4>
                                                                 {#if (task.eval_details.evaluations.some((ev: {score: number}) => ev.score >= 1) && 
                                                                      task.eval_details.evaluations.some((ev: {score: number}) => ev.score < 1)) ||
@@ -540,39 +522,12 @@
                                                                     </div>
                                                                 {/if}
                                                             </div>
-                                                            <div class="space-y-4 divide-y divide-gray-100">
-                                                                {#each task.eval_details.evaluations.filter((ev: { score: number }) => 
-                                                                    evaluationFilter === "" || 
-                                                                    (evaluationFilter === "passed" && ev.score >= 1) ||
-                                                                    (evaluationFilter === "failed" && ev.score < 1)
-                                                                ) as ev}
-                                                                    {@const minScore = task.eval_spec?.checklist?.find((item: { text: string; min_score?: number }) => 
-                                                                        typeof item === 'object' && 
-                                                                        item.text === ev.criterion
-                                                                    )?.min_score}
-                                                                    {@const normalizedScore = minScore ? (ev.score / minScore) : ev.score}
-                                                                    <div class="pt-4 first:pt-0">
-                                                                        <div class="flex items-center gap-3">
-                                                                            <div class="relative flex flex-col items-center" style="min-height: 48px">
-                                                                                <div class="flex-none flex items-center justify-center w-9 h-9 rounded-full border
-                                                                                    {getScoreStyles(normalizedScore).color} {getScoreStyles(normalizedScore).border}">
-                                                                                    <span class="text-xs font-medium leading-none">
-                                                                                        {(ev.score * 100).toFixed(0)}%
-                                                                                    </span>
-                                                                                </div>
-                                                                                {#if minScore}
-                                                                                    <div class="mt-1">
-                                                                                        <span class="text-[10px] font-medium {getScoreStyles(ev.score).text}">
-                                                                                            min: {(minScore * 100).toFixed(0)}%
-                                                                                        </span>
-                                                                                    </div>
-                                                                                {/if}
-                                                                            </div>
-                                                                            <div class="text-sm font-medium flex-1">{ev.criterion}</div>
-                                                                        </div>
-                                                                        <div class="mt-1 text-sm text-gray-600">{ev.rationale}</div>
-                                                                    </div>
-                                                                {/each}
+                                                            <div class="mt-3">
+                                                                <EvaluationResults 
+                                                                    evaluations={task.eval_details.evaluations}
+                                                                    evalSpec={task.eval_spec}
+                                                                    showFilter={false}
+                                                                />
                                                             </div>
                                                         </div>
                                                     {/if}
