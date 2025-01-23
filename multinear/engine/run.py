@@ -25,52 +25,104 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
     Yields:
         Dict containing status updates, final results, and status map
     """
-    # Get the project folder path
-    project_folder = Path(project_config["folder"])
-
-    # Load config.yaml from project folder
-    config_path = project_folder / ".multinear" / "config.yaml"
-    if not config_path.exists():
-        raise FileNotFoundError(f"Config file not found at {config_path}")
-
-    # Save git revision to job details
-    git_revision = get_git_revision(project_folder)
-    print(f"Git revision: {git_revision}")
-    job.update(details={"git_revision": get_git_revision(project_folder)})
-
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)
-
-    # If challenge_id is provided, filter tasks to only include the specified task
-    if challenge_id:
-        # if challenge_id is a repeated task id (looks like xxx_[number]), clean it up
-        if "_" in challenge_id and challenge_id.split("_")[1].isdigit():
-            challenge_id = challenge_id.split("_")[0]
-        config["tasks"] = [task for task in config["tasks"] if task.get("id") == challenge_id]
-        if not config["tasks"]:
-            raise ValueError(f"No task found with challenge ID {challenge_id}")
-
-    # Construct path to task_runner.py
-    task_runner_path = project_folder / ".multinear" / "task_runner.py"
-
-    if not task_runner_path.exists():
-        raise FileNotFoundError(f"Task runner file not found at {task_runner_path}")
-
-    # Dynamically load the task runner module
-    spec = importlib.util.spec_from_file_location("task_runner", task_runner_path)
-    task_runner_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(task_runner_module)
-
-    # Check if run_task exists in the module
-    if not hasattr(task_runner_module, "run_task"):
-        raise AttributeError(f"run_task function not found in {task_runner_path}")
-
-    # Run start_run if it exists
-    if hasattr(task_runner_module, "start_run"):
-        task_runner_module.start_run()
-
-    # Run the experiment
     try:
+        # Get the project folder path
+        project_folder = Path(project_config["folder"])
+
+        # Load config.yaml from project folder
+        config_path = project_folder / ".multinear" / "config.yaml"
+        if not config_path.exists():
+            raise FileNotFoundError(f"Config file not found at {config_path}")
+
+        # Save git revision to job details
+        git_revision = get_git_revision(project_folder)
+        print(f"Git revision: {git_revision}")
+        job.update(details={"git_revision": get_git_revision(project_folder)})
+
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+
+        # If challenge_id is provided, filter tasks to only include the specified task
+        if challenge_id:
+            # if challenge_id is a repeated task id (looks like xxx_[number]), clean it up
+            if "_" in challenge_id and challenge_id.split("_")[1].isdigit():
+                challenge_id = challenge_id.split("_")[0]
+            config["tasks"] = [task for task in config["tasks"] if task.get("id") == challenge_id]
+            if not config["tasks"]:
+                raise ValueError(f"No task found with challenge ID {challenge_id}")
+
+        # Construct path to task_runner.py
+        task_runner_path = project_folder / ".multinear" / "task_runner.py"
+
+        if not task_runner_path.exists():
+            raise FileNotFoundError(f"Task runner file not found at {task_runner_path}")
+
+        # Dynamically load the task runner module
+        try:
+            spec = importlib.util.spec_from_file_location("task_runner", task_runner_path)
+            task_runner_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(task_runner_module)
+        except Exception as e:
+            error_msg = f"Failed to load task_runner.py: {str(e)}"
+            job.update(
+                status=TaskStatus.FAILED,
+                details={
+                    "error": error_msg,
+                    "status_map": {}
+                }
+            )
+            yield {
+                "status": TaskStatus.FAILED,
+                "total": 0,
+                "error": error_msg,
+                "status_map": {}
+            }
+            return
+
+        # Check if run_task exists in the module
+        if not hasattr(task_runner_module, "run_task"):
+            error_msg = f"run_task function not found in {task_runner_path}"
+            job.update(
+                status=TaskStatus.FAILED,
+                details={
+                    "error": error_msg,
+                    "status_map": {}
+                }
+            )
+            yield {
+                "status": TaskStatus.FAILED,
+                "total": 0,
+                "error": error_msg,
+                "status_map": {}
+            }
+            return
+
+        # Run start_run if it exists
+        if hasattr(task_runner_module, "start_run"):
+            try:
+                task_runner_module.start_run()
+            except Exception as e:
+                error_msg = f"Error in start_run: {str(e)}"
+                job.update(
+                    status=TaskStatus.FAILED,
+                    details={
+                        "error": error_msg,
+                        "status_map": {}
+                    }
+                )
+                yield {
+                    "status": TaskStatus.FAILED,
+                    "total": 0,
+                    "error": error_msg,
+                    "status_map": {}
+                }
+                return
+
+        # Check if tasks are defined
+        if not config.get("tasks", []):
+            raise ValueError("No tasks defined in config.yaml")
+
+        # Run the experiment
         results = []
         total_tasks = sum(task.get("repeat", 1) for task in config["tasks"])
 
@@ -135,8 +187,8 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
                     TaskModel.executed(
                         task_id,
                         input,
-                        task_result["output"],
-                        task_result["details"],
+                        task_result.get("output"),
+                        task_result.get("details", {}),
                         capture.logs,
                     )
 
@@ -165,13 +217,20 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
                     results.append([task_result, eval_result])
 
                 except Exception as e:
-                    # raise e
                     error_msg = str(e)
                     print(
                         f"Error running task {current_task}/{total_tasks}: {error_msg}"
                     )
                     results.append({"error": error_msg})
                     TaskModel.fail(task_id, error=error_msg)
+                    # Update job details with the error
+                    job.update(
+                        status=TaskStatus.FAILED,
+                        details={
+                            "error": error_msg,
+                            "status_map": TaskModel.get_status_map(job.id)
+                        }
+                    )
 
         yield {
             "status": TaskStatus.COMPLETED,
@@ -181,10 +240,11 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
         }
 
     except Exception as e:
-        # raise e
-        print(f"Error running experiment: {e}")
+        error_msg = str(e)
+        print(f"Error running experiment: {error_msg}")
         yield {
             "status": TaskStatus.FAILED,
             "total": 0,
-            "error": str(e)
+            "error": error_msg,
+            "status_map": TaskModel.get_status_map(job.id)
         }

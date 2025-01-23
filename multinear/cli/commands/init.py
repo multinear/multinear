@@ -64,6 +64,14 @@ def handle(args):
     with open(config_path, 'w') as f:
         f.write(config_content)
 
+    # Copy task_runner.py template to project root
+    task_runner_template = Path(__file__).parent.parent.parent / 'templates' / 'task_runner.py'
+    task_runner_dest = multinear_dir / 'task_runner.py'
+
+    if task_runner_template.exists():
+        with open(task_runner_template, 'r') as src, open(task_runner_dest, 'w') as dst:
+            dst.write(src.read())
+
     console.print(
         f"\n[green]Project initialized successfully in {MULTINEAR_CONFIG_DIR}[/green]"
     )

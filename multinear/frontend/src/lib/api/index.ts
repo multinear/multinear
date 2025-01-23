@@ -14,6 +14,7 @@ export interface JobResponse {
     current_task?: number;
     task_status_map?: Record<string, string>;
     details?: Record<string, any>;
+    error?: string;
 }
 
 export interface RecentRun {

@@ -41,6 +41,13 @@ export async function pollJobStatus(projectId: string, jobId: string, reloadRece
                 }, {} as Record<string, number>);
             }
 
+            // Check both top-level status and details.status for failure
+            if (statusData.details?.status === 'failed' || statusData.details?.error) {
+                status = 'failed';
+                // Set the error in a way that JobStatus component will display it
+                statusData.error = statusData.details.error;
+            }
+
             jobStore.set({
                 currentJob: jobId,
                 jobStatus: status,
@@ -48,13 +55,27 @@ export async function pollJobStatus(projectId: string, jobId: string, reloadRece
                 taskStatusCounts: counts,
             });
 
-            if (status === 'completed') {
+            if (status === 'completed' && !statusData.details?.error) {
                 await reloadRecentRuns();
-            } else if (status === 'failed') {
+            } else if (status === 'failed' || statusData.details?.error) {
                 break;
             }
         } catch (error) {
             console.error('Error polling job status:', error);
+            jobStore.set({
+                currentJob: jobId,
+                jobStatus: 'failed',
+                jobDetails: {
+                    project_id: projectId,
+                    job_id: jobId,
+                    status: 'failed',
+                    total_tasks: 1,
+                    current_task: 1,
+                    task_status_map: {},
+                    error: error instanceof Error ? error.message : 'Unknown error occurred'
+                },
+                taskStatusCounts: {},
+            });
             break;
         }
     }
@@ -99,10 +120,20 @@ export async function executePendingRun(reloadRecentRuns: () => Promise<void>) {
         await pollJobStatus(pendingRun.projectId, jobId, reloadRecentRuns);
     } catch (error) {
         console.error('Error executing pending run:', error);
-        jobStore.update(state => ({
-            ...state,
-            jobStatus: 'error',
-        }));
+        jobStore.set({
+            currentJob: null,
+            jobStatus: 'failed',
+            jobDetails: {
+                project_id: pendingRun.projectId,
+                job_id: '',
+                status: 'failed',
+                total_tasks: 1,
+                current_task: 1, // Set to 1 to show completion
+                task_status_map: {},
+                error: error instanceof Error ? error.message : 'Unknown error occurred'
+            },
+            taskStatusCounts: {},
+        });
     } finally {
         pendingRunStore.set(null);
     }

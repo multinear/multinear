@@ -9,7 +9,7 @@
         <div class="flex items-center gap-4">
             <span class="font-medium">Latest Run:</span>
             <span>{$jobStore.currentJob.slice(-8)}</span>
-            <span class={`text-gray-500 ${$jobStore.jobStatus === 'failed' ? 'text-red-500' : ''}`}>
+            <span class={`text-gray-500 ${$jobStore.jobStatus === 'failed' || $jobStore.jobStatus === 'error' ? 'text-red-500' : ''}`}>
                 Status: {$jobStore.jobStatus}
             </span>
         </div>
@@ -26,8 +26,8 @@
                 {:else}
                     <div class="w-full bg-gray-200 rounded-sm h-4 dark:bg-gray-700 relative overflow-hidden">
                         <div 
-                            class="h-4 transition-all duration-300 bg-blue-600 relative overflow-hidden progress-stripe rounded-r-sm" 
-                            style="width: {$jobStore.jobStatus === 'completed' ? '100' : ($jobStore.jobDetails.current_task! / $jobStore.jobDetails.total_tasks * 100)}%;"
+                            class={`h-4 transition-all duration-300 relative overflow-hidden rounded-r-sm ${$jobStore.jobStatus === 'failed' ? 'bg-red-500' : 'bg-blue-600 progress-stripe'}`}
+                            style="width: {$jobStore.jobStatus === 'completed' || $jobStore.jobStatus === 'failed' ? '100' : ($jobStore.jobDetails.current_task! / $jobStore.jobDetails.total_tasks * 100)}%;"
                         ></div>
                         
                         {#if $jobStore.jobDetails.task_status_map}
@@ -73,11 +73,25 @@
                         </div>
                         <div class="flex gap-8">
                             <span>{$jobStore.jobDetails?.current_task || 0} / {$jobStore.jobDetails?.total_tasks || 0}</span>
-                            <span>{$jobStore.jobStatus === 'completed' ? '100' : Math.round(($jobStore.jobDetails?.current_task || 0) / ($jobStore.jobDetails?.total_tasks || 1) * 100)}%</span>
+                            <span>{$jobStore.jobStatus === 'completed' || $jobStore.jobStatus === 'failed' ? '100' : Math.round(($jobStore.jobDetails?.current_task || 0) / ($jobStore.jobDetails?.total_tasks || 1) * 100)}%</span>
                         </div>
                     </div>
                 {/if}
             </div>
+        {/if}
+
+        {#if $jobStore.jobStatus === 'error' || $jobStore.jobStatus === 'failed'}
+            <Alert.Root variant="destructive" class="mt-2">
+                <AlertCircle class="h-4 w-4" />
+                <Alert.Title>Run Failed</Alert.Title>
+                <Alert.Description>
+                    {#if $jobStore.jobDetails?.error}
+                        {$jobStore.jobDetails.error}
+                    {:else}
+                        The experiment failed to complete. Check the task details for more information.
+                    {/if}
+                </Alert.Description>
+            </Alert.Root>
         {/if}
     </div>
 {/if}

@@ -15,12 +15,14 @@
         </Card.Description>
     </Card.Header>
     <Card.Footer class="flex justify-end">
-        <Button 
-            variant="outline" 
-            class="border-red-200 text-red-800 hover:bg-red-100"
-            on:click={onRetry}
-        >
-            Try Again
-        </Button>
+        {#if onRetry}
+            <Button 
+                variant="outline" 
+                class="border-red-200 text-red-800 hover:bg-red-100"
+                on:click={onRetry}
+            >
+                Try Again
+            </Button>
+        {/if}
     </Card.Footer>
 </Card.Root>

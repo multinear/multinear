@@ -7,7 +7,7 @@
     import { Label } from "$lib/components/ui/label";
     import { Input } from "$lib/components/ui/input";
     import { formatDuration, intervalToDuration } from 'date-fns';
-    import { ChevronRight, Play } from 'lucide-svelte';
+    import { ChevronRight, Play, AlertCircle } from 'lucide-svelte';
     import TimeAgo from '$lib/components/TimeAgo.svelte';
     import StatusFilter from '$lib/components/StatusFilter.svelte';
     import { filterTasks, getStatusCounts, getTaskStatus, truncateInput } from '$lib/utils/tasks';
@@ -20,6 +20,7 @@
     import { handleStartExperiment, jobStore, handleRerunTask } from '$lib/stores/jobs';
     import { marked } from 'marked';
     import { Switch } from "$lib/components/ui/switch";
+    import * as Alert from "$lib/components/ui/alert";
 
     let runId: string | null = null;
     let runDetails: any = null;
@@ -161,7 +162,9 @@
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div class="space-y-1">
                                 <div class="text-sm text-gray-500">Status</div>
-                                <div class="font-semibold">{runDetails.status}</div>
+                                <div class="font-semibold">
+                                    <StatusBadge status={runDetails.details?.status || runDetails.status} />
+                                </div>
                             </div>
                             <!-- <div class="space-y-1">
                                 <div class="text-sm text-gray-500">Project</div>
@@ -185,6 +188,14 @@
                                 />
                             </div>
                         </div>
+                        
+                        {#if runDetails.details?.error}
+                            <div class="mt-4">
+                                <ErrorDisplay 
+                                    errorMessage={runDetails.details.error} 
+                                />
+                            </div>
+                        {/if}
                         
                         <!-- Filters Row -->
                         <div class="flex gap-8 items-end mt-4">
@@ -349,6 +360,15 @@
                                                                             : JSON.stringify(task.task_output, null, 2)}
                                                                     </div>
                                                                 {/if}
+                                                            </div>
+                                                        </div>
+                                                    {/if}
+
+                                                    {#if task.error}
+                                                        <div>
+                                                            <h5 class="text-sm font-semibold mb-2 text-red-600">Error</h5>
+                                                            <div class="bg-red-50 p-4 rounded border border-red-200 whitespace-pre-wrap font-mono text-xs text-red-700">
+                                                                {task.error}
                                                             </div>
                                                         </div>
                                                     {/if}
