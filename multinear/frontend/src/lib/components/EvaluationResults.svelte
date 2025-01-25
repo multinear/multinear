@@ -28,7 +28,7 @@
             item.text === ev.criterion
         )?.min_score}
         <div class="pt-4 first:pt-0 {includePrintStyles ? 'print:break-inside-avoid' : ''}">
-            <div class="flex gap-3 items-center">
+            <div class="flex gap-3 items-start">
                 <div class="flex-none pt-[2px]">
                     <ScoreCircle 
                         score={ev.score} 
@@ -36,7 +36,14 @@
                         {includePrintStyles} 
                     />
                 </div>
-                <div class="text-sm font-medium flex-1 {minScore ? 'pb-7' : 'pb-1'}">{ev.criterion}</div>
+                <div class="text-sm font-medium flex-1 {minScore ? 'pb-7' : 'pb-1'}">
+                    {#each ev.criterion
+                        .replace(/\\n/g, '\n')
+                        .replace(/\\(\s{1,2})\\ /g, ' ')
+                        .split('\n') as line}
+                        <div>{line}</div>
+                    {/each}
+                </div>
             </div>
             <div class="mt-1 text-sm text-gray-600">{ev.rationale}</div>
         </div>
