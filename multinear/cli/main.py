@@ -1,6 +1,6 @@
 import argparse
 from importlib.metadata import version
-from .commands import init, run, recent, details, web
+from .commands import init, run, recent, details, web, export
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -16,6 +16,7 @@ def get_parser() -> argparse.ArgumentParser:
     recent.add_parser(subparsers)
     details.add_parser(subparsers)
     web.add_parser(subparsers)
+    export.add_parser(subparsers)
 
     return parser
 
@@ -31,6 +32,7 @@ def main():
         'details': details.handle,
         'web': web.handle,
         'web_dev': web.handle_dev,
+        'export': export.handle,
     }
 
     if args.command in command_handlers:
