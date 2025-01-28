@@ -1,4 +1,5 @@
 import sys
+import os
 from pathlib import Path
 from rich.console import Console
 from fastapi import FastAPI
@@ -11,8 +12,12 @@ from .engine.storage import init_project_db
 
 # Initialize the configuration and database
 try:
+    # Get config path from environment variable or use default
+    config_path = os.environ.get('MULTINEAR_CONFIG')
+    config_path = Path(config_path) if config_path else None
+
     # Initialize the database first
-    init_project_db()
+    init_project_db(config_path)
 
     # Create the FastAPI application with custom documentation URLs
     app = FastAPI(

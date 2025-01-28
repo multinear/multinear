@@ -14,11 +14,12 @@ def add_parser(subparsers):
         help='Output file path (default: <job_id>.json)',
         type=str
     )
+    parser.add_argument('--config', type=str, help='Name of custom config.yaml file')
     parser.set_defaults(func=handle)
 
 
 def handle(args):
-    project = get_current_project()
+    project = get_current_project(args.config)
     if not project:
         return
 

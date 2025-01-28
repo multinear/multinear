@@ -8,11 +8,12 @@ from ...engine.storage import JobModel, TaskStatus
 
 def add_parser(subparsers):
     parser = subparsers.add_parser('recent', help='Show recent experiment runs')
+    parser.add_argument('--config', type=str, help='Name of custom config.yaml file')
     parser.set_defaults(func=handle)
 
 
 def handle(args):
-    project = get_current_project()
+    project = get_current_project(args.config)
     if not project:
         return
 

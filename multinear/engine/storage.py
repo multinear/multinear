@@ -408,14 +408,17 @@ def get_db():
         yield db
 
 
-def init_project_db():
+def init_project_db(config_path: Optional[Path] = None):
     """
     Initialize the API by setting up the database and loading project configurations.
 
     This function performs the following steps:
     1. Initializes the database connection and creates necessary tables.
-    2. Loads the project configuration from the local `.multinear/config.yaml` file.
+    2. Loads the project configuration from the specified config file or default .multinear/config.yaml.
     3. Extracts project details and saves or updates the project in the database.
+
+    Args:
+        config_path: Optional path to a custom config.yaml file. If not provided, uses default.
     """
     # Initialize the database and read the project configuration
     init_db()
@@ -423,8 +426,9 @@ def init_project_db():
     # Get the current working directory
     current_dir = Path.cwd()
 
-    # Read project configuration from the local .multinear/config.yaml
-    config_path = current_dir / ".multinear" / "config.yaml"
+    # Use provided config path or default
+    if config_path is None:
+        config_path = current_dir / ".multinear" / "config.yaml"
 
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found at {config_path}")

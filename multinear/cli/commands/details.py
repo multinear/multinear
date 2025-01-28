@@ -19,12 +19,13 @@ def add_parser(subparsers):
         'details', help='Show detailed information about a specific run'
     )
     parser.add_argument('run_id', help='Partial or full ID of the run to show')
+    parser.add_argument('--config', type=str, help='Name of custom config.yaml file')
     parser.set_defaults(func=handle)
 
 
 def handle(args):
     partial_id = args.run_id
-    job = find_run_by_partial_id(partial_id)
+    job = find_run_by_partial_id(partial_id, args.config)
     if not job:
         console = Console()
         console.print(f"[red]Error:[/red] No run found matching ID '{partial_id}'")
@@ -295,12 +296,12 @@ def print_details(console: Console, job: JobModel):
         print_task_details(console, task)
 
 
-def find_run_by_partial_id(partial_id: str) -> Optional[JobModel]:
+def find_run_by_partial_id(partial_id: str, config_path: Optional[str] = None) -> Optional[JobModel]:
     """
     Find a run by partial ID (last N characters).
     Returns the most recent matching run if multiple found.
     """
-    project = get_current_project()
+    project = get_current_project(config_path)
     if not project:
         return None
 

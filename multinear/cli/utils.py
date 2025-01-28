@@ -7,6 +7,16 @@ from rich.console import Console
 from ..engine.storage import ProjectModel, TaskStatus, init_project_db
 
 
+def get_config_path(custom_config: Optional[str] = None) -> Path:
+    """Get the path to the config file, using custom path if provided."""
+    if custom_config:
+        path = Path(custom_config + ".yaml")
+        if not path.is_absolute():
+            path = Path.cwd() / ".multinear" / path
+        return path
+    return Path.cwd() / ".multinear" / "config.yaml"
+
+
 def slugify(text: str) -> str:
     """Convert text to a slug suitable for URLs or identifiers."""
     text = re.sub(r'[^\w\s-]', '', text)
@@ -48,20 +58,21 @@ def format_task_status(status: str) -> str:
     return f"[yellow]{status}[/yellow]"
 
 
-def get_current_project() -> Optional[ProjectModel]:
-    """
-    Ensure the project is initialized and return the current ProjectModel.
-    Returns None if the project is not initialized.
-    """
-    MULTINEAR_CONFIG_DIR = '.multinear'
-    console = Console()
-
-    if not Path(MULTINEAR_CONFIG_DIR).exists():
+def get_current_project(custom_config: Optional[str] = None) -> Optional[ProjectModel]:
+    """Get the current project from the database, initializing if necessary."""
+    try:
+        config_path = get_config_path(custom_config)
+        project_id = init_project_db(config_path)
+        return ProjectModel.find(project_id)
+    except FileNotFoundError as e:
+        console = Console()
+        console.print(f"[red]Error: {str(e)}[/red]")
         console.print(
             "[red]Error:[/red] .multinear directory not found. "
             "Please run 'multinear init' first."
         )
         return None
-    project_id = init_project_db()
-    project = ProjectModel.find(project_id)
-    return project
+    except Exception as e:
+        console = Console()
+        console.print(f"[red]Error: {str(e)}[/red]")
+        return None

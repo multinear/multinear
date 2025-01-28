@@ -1,9 +1,10 @@
 import sys
+import os
 from pathlib import Path
 from rich.console import Console
 import uvicorn
 
-from ..utils import get_current_project
+from ..utils import get_current_project, get_config_path
 
 
 def add_parser(subparsers):
@@ -19,13 +20,19 @@ def add_parser(subparsers):
             '--host', type=str, default='127.0.0.1', help='Host to run the server on'
         )
         parser.add_argument('--debug', action='store_true', help='Show debug information on errors')
+        parser.add_argument('--config', type=str, help='Name of custom config.yaml file')
 
 
 def handle(args):
     try:
-        project = get_current_project()
+        project = get_current_project(args.config)
         if not project:
             return
+
+        # Set config path in environment if provided
+        if args.config:
+            config_path = str(get_config_path(args.config))
+            os.environ['MULTINEAR_CONFIG'] = config_path
 
         uvicorn_config = {
             "app": "multinear.main:app",
