@@ -380,7 +380,7 @@
                                                             <h5 class="text-sm font-semibold mb-2">Details</h5>
                                                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                                 {#each Object.entries(task.task_details) as [key, value]}
-                                                                    {#if key !== 'prompt'}
+                                                                    {#if !['prompt', 'reasoning'].includes(key)}
                                                                         <div>
                                                                             <div class="text-sm font-medium text-gray-600 mb-1">{key}</div>
                                                                             <div class="bg-white p-3 rounded border border-gray-200 whitespace-pre-wrap font-mono text-xs">
@@ -393,34 +393,38 @@
                                                         </div>
                                                     {/if}
 
-                                                    {#if task.task_details?.prompt}
-                                                        <div>
-                                                            <h5 class="text-sm font-semibold mb-2">Prompt</h5>
-                                                            <details class="bg-white rounded border border-gray-200">
-                                                                <summary class="px-4 py-2 cursor-pointer hover:bg-gray-50 flex justify-between items-center">
-                                                                    <span>View Prompt</span>
-                                                                    <div class="flex items-center space-x-2">
-                                                                        <Switch id="prompt-markdown" bind:checked={showPromptMarkdown} />
-                                                                        <Label for="prompt-markdown" class="text-sm">Markdown</Label>
+                                                    {#if task.task_details}
+                                                        {@const promptField = task.task_details?.prompt ? 'prompt' : 
+                                                                            task.task_details?.reasoning ? 'reasoning' : null}
+                                                        {#if promptField}
+                                                            <div>
+                                                                <h5 class="text-sm font-semibold mb-2">{promptField}</h5>
+                                                                <details class="bg-white rounded border border-gray-200">
+                                                                    <summary class="px-4 py-2 cursor-pointer hover:bg-gray-50 flex justify-between items-center">
+                                                                        <span>View {promptField}</span>
+                                                                        <div class="flex items-center space-x-2">
+                                                                            <Switch id="prompt-markdown" bind:checked={showPromptMarkdown} />
+                                                                            <Label for="prompt-markdown" class="text-sm">Markdown</Label>
+                                                                        </div>
+                                                                    </summary>
+                                                                    <div class="p-4">
+                                                                        {#if showPromptMarkdown}
+                                                                            <div class="markdown-content">
+                                                                                {@html marked(typeof task.task_details[promptField] === 'string' 
+                                                                                    ? task.task_details[promptField]
+                                                                                    : JSON.stringify(task.task_details[promptField], null, 2))}
+                                                                            </div>
+                                                                        {:else}
+                                                                            <div class="whitespace-pre-wrap font-mono text-xs">
+                                                                                {typeof task.task_details[promptField] === 'string' 
+                                                                                    ? task.task_details[promptField]
+                                                                                    : JSON.stringify(task.task_details[promptField], null, 2)}
+                                                                            </div>
+                                                                        {/if}
                                                                     </div>
-                                                                </summary>
-                                                                <div class="p-4">
-                                                                    {#if showPromptMarkdown}
-                                                                        <div class="markdown-content">
-                                                                            {@html marked(typeof task.task_details.prompt === 'string' 
-                                                                                ? task.task_details.prompt 
-                                                                                : JSON.stringify(task.task_details.prompt, null, 2))}
-                                                                        </div>
-                                                                    {:else}
-                                                                        <div class="whitespace-pre-wrap font-mono text-xs">
-                                                                            {typeof task.task_details.prompt === 'string' 
-                                                                                ? task.task_details.prompt 
-                                                                                : JSON.stringify(task.task_details.prompt, null, 2)}
-                                                                        </div>
-                                                                    {/if}
-                                                                </div>
-                                                            </details>
-                                                        </div>
+                                                                </details>
+                                                            </div>
+                                                        {/if}
                                                     {/if}
 
                                                     {#if task.task_logs}
