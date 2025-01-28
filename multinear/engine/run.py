@@ -133,18 +133,21 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
             raise ValueError("No tasks defined in config.yaml")
 
         # Run the experiment
+        global_repeat = config.get("meta", {}).get("repeat", 1)
         results = []
-        total_tasks = sum(task.get("repeat", 1) for task in config["tasks"])
+        total_tasks = sum(task.get("repeat", global_repeat) for task in config["tasks"])
 
         yield {"status": TaskStatus.STARTING, "total": total_tasks}
 
         current_task = 0
         for task in config["tasks"]:
             # Get number of repeats for this task (default to 1)
-            repeats = task.get("repeat", 1)
+            repeats = task.get("repeat", global_repeat)
 
             # Initialize variations tracking for this task
-            if task.get("rephrase", False):
+            global_rephrase = config.get("meta", {}).get("rephrase", False)
+            do_rephrase = task.get("rephrase", global_rephrase)
+            if do_rephrase:
                 previous_variations = []
 
             for repeat in range(repeats):
@@ -153,9 +156,15 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
                 try:
                     input = task["input"]
                     # Rephrase the input for repeats, if enabled
-                    if repeat > 0 and task.get("rephrase", False):
-                        input = rephrase_input(input, previous_variations)
-                        previous_variations.append(input)
+                    if repeat > 0 and do_rephrase:
+                        # If the input is a dictionary, rephrase the 'question' key only
+                        if isinstance(input, dict) and 'question' in input:
+                            rephrased_question = rephrase_input(input['question'], previous_variations)
+                            previous_variations.append(rephrased_question)
+                            input = {**input, 'question': rephrased_question}  # Create new dict with rephrased question
+                        else:
+                            input = rephrase_input(input, previous_variations)
+                            previous_variations.append(input)
 
                     challenge_id = task.get("id", None)
                     if not challenge_id:  # Calculate challenge ID from input
@@ -211,6 +220,11 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
 
                     # Inject global context into the task
                     task["context"] = config.get("meta", {}).get("context", "")
+
+                    # Inject global checklist, if present
+                    global_checklist = config.get("meta", {}).get("checklist", None)
+                    if global_checklist and "checklist" not in task:  # avoid overriding task-specific checklist
+                        task["checklist"] = global_checklist
 
                     # Evaluate the task
                     with OutputCapture() as capture:
