@@ -1,6 +1,8 @@
 from fastapi import BackgroundTasks, HTTPException, APIRouter, Query
 from typing import List
 from datetime import timezone
+import os
+from pathlib import Path
 
 from ..api.schemas import (
     Project,
@@ -33,8 +35,16 @@ def background_job(project_id: str, job_id: str, challenge_id: str | None = None
         project = ProjectModel.find(project_id)
         job = JobModel.find(job_id)
 
+        # Get project config and add custom config file if specified in environment
+        project_dict = project.to_dict()
+        config_path = os.environ.get('MULTINEAR_CONFIG')
+        if config_path:
+            # Extract just the filename without path and .yaml extension
+            config_file = Path(config_path).name
+            project_dict["config_file"] = config_file
+
         # Run the experiment and handle status updates
-        for update in run_experiment(project.to_dict(), job, challenge_id):
+        for update in run_experiment(project_dict, job, challenge_id):
             # Add status map from TaskModel to the update
             update["status_map"] = TaskModel.get_status_map(job_id)
 

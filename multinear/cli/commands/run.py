@@ -31,7 +31,12 @@ def handle(args):
     pbar = None
 
     try:
-        for update in run_experiment(project.to_dict(), job):
+        # Add config file to project config if specified
+        project_dict = project.to_dict()
+        if args.config:
+            project_dict["config_file"] = args.config + ".yaml"
+
+        for update in run_experiment(project_dict, job):
             results.append(update)
 
             # Add status map from TaskModel to the update

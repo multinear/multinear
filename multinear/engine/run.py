@@ -31,7 +31,7 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
         project_folder = Path(project_config["folder"])
 
         # Load config.yaml from project folder
-        config_path = project_folder / ".multinear" / "config.yaml"
+        config_path = project_folder / ".multinear" / project_config.get("config_file", "config.yaml")
         if not config_path.exists():
             raise FileNotFoundError(f"Config file not found at {config_path}")
 
