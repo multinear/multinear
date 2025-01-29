@@ -122,6 +122,14 @@ class JobModel(Base):
         with db_context() as db:
             return db.query(cls).filter(cls.id == job_id).first()
 
+    @classmethod
+    def find_partial(cls, job_id: str) -> Optional["JobModel"]:
+        """
+        Find a job by partial ID.
+        """
+        with db_context() as db:
+            return db.query(cls).filter(cls.id.like(f"%{job_id}")).first()
+
     def update(
         self,
         status: str = None,
@@ -249,6 +257,16 @@ class TaskModel(Base):
     evaluated_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)
     job = relationship("JobModel", back_populates="tasks")
+
+    def to_dict(self):
+        """
+        Convert the TaskModel to a dictionary, excluding SQLAlchemy internals
+        """
+        data = {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
+        for k, v in data.items():
+            if isinstance(v, datetime):
+                data[k] = v.isoformat()  # Convert datetime objects to ISO format strings
+        return data
 
     @classmethod
     def start(cls, job_id: str, task_number: int, challenge_id: str) -> str:

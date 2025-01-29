@@ -247,7 +247,7 @@
                                             evaluations={task.eval_details.evaluations}
                                             evalSpec={task.eval_spec}
                                             includePrintStyles={true}
-                                            showFilter={false}
+                                            filter={""}
                                         />
                                     </div>
                                 {/if}

@@ -28,11 +28,7 @@ def handle(args):
     # Find the job
     try:
         # Support both full and truncated job IDs
-        jobs = JobModel.list_recent(project.id)
-        job = next(
-            (j for j in jobs if j.id.endswith(args.job_id)),
-            None
-        )
+        job = JobModel.find_partial(args.job_id)
         if not job:
             console.print(f"[red]Error: Job {args.job_id} not found[/red]")
             return
@@ -49,8 +45,13 @@ def handle(args):
         "status": job.status,
         "model": job.get_model_summary(),
         "details": job.details,
-        "tasks": TaskModel.get_status_map(job.id)
+        "tasks": {}  # We'll populate this with detailed task info
     }
+
+    # Get detailed task information
+    tasks = TaskModel.list(job.id)
+    for task in tasks:
+        export_data["tasks"][task.challenge_id] = task.to_dict()
 
     # Determine output path
     output_path = args.output if args.output else f"{job.id}.json"
