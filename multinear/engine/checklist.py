@@ -160,6 +160,10 @@ Evaluate each checklist item individually, providing a score and detailed ration
         result = json.loads(tool_call["function"]["arguments"])
         evaluations = result["evaluations"]
 
+        def _clean_string(s):
+            """Remove all spaces and special characters from a string."""
+            return ''.join(c.lower() for c in s.replace("\\n", "").replace("\n", "").replace("\\", "") if c.isalnum())
+
         if not isinstance(self._original_checklist, str):
             # Calculate overall score based on individual criteria
             total_score = 0
@@ -169,7 +173,7 @@ Evaluate each checklist item individually, providing a score and detailed ration
                 for item in self._original_checklist:
                     if isinstance(item, dict):
                         criterion_text = item["text"]
-                        if criterion_text == eval["criterion"]:
+                        if _clean_string(criterion_text) == _clean_string(eval["criterion"]):
                             min_score = item.get('min_score')
                             if min_score is not None and score >= min_score:
                                 score = 1.0
