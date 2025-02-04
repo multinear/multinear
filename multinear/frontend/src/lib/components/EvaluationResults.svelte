@@ -8,10 +8,11 @@
 
     function getMinScore(criterion: string): number {
         try {
-            return evalSpec?.checklist?.find((item: { text: string; min_score?: number }) => 
+            const minScore = evalSpec?.checklist?.find((item: { text: string; min_score?: number }) => 
                 typeof item === 'object' && 
                 item.text === criterion
             )?.min_score;
+            return minScore ? minScore : 1;
         } catch (e) {
             // console.error(e);
             return 1;
