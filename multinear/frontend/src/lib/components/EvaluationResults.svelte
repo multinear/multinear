@@ -6,12 +6,20 @@
     export let includePrintStyles: boolean = false;
     export let filter: string = "";
 
+    function getMinScore(criterion: string): number {
+        try {
+            return evalSpec?.checklist?.find((item: { text: string; min_score?: number }) => 
+                typeof item === 'object' && 
+                item.text === criterion
+            )?.min_score;
+        } catch (e) {
+            // console.error(e);
+            return 1;
+        }
+    }
+
     function isPassed(ev: { criterion: string; score: number }): boolean {
-        const minScore = evalSpec?.checklist?.find((item: { text: string; min_score?: number }) => 
-            typeof item === 'object' && 
-            item.text === ev.criterion
-        )?.min_score;
-        return minScore ? ev.score >= minScore : ev.score >= 1;
+        return ev.score >= getMinScore(ev.criterion);
     }
 
     $: filteredEvaluations = evaluations.filter(ev => 
@@ -23,16 +31,14 @@
 
 <div class="space-y-5 divide-y divide-gray-100">
     {#each filteredEvaluations as ev}
-        {@const minScore = evalSpec?.checklist?.find((item: { text: string; min_score?: number }) => 
-            typeof item === 'object' && 
-            item.text === ev.criterion
-        )?.min_score}
+        {@const minScore = getMinScore(ev.criterion)}
         <div class="pt-4 first:pt-0 {includePrintStyles ? 'print:break-inside-avoid' : ''}">
             <div class="flex gap-3 items-start">
                 <div class="flex-none pt-[2px]">
                     <ScoreCircle 
                         score={ev.score} 
                         minScore={minScore} 
+                        showMinScore={minScore !== undefined && minScore < 1}
                         {includePrintStyles} 
                     />
                 </div>
