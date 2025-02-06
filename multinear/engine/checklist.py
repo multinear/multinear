@@ -6,7 +6,7 @@ from autoevals.llm import OpenAILLMClassifier, DEFAULT_MODEL
 from braintrust_core.score import Score
 
 
-class CustomClassifier(LLMClassifier):
+class CustomClassifierBase(LLMClassifier):
     """
     Base class to create custom LLM classifiers by overriding the prompt.
     """
@@ -23,7 +23,7 @@ class CustomClassifier(LLMClassifier):
         return LLMClassifier(cls_name, spec['prompt'], spec['choice_scores'], **kwargs)
 
 
-class ChecklistClassifier(CustomClassifier):
+class ChecklistClassifier(CustomClassifierBase):
     """
     Evaluate whether an LLM-generated answer meets all criteria defined in a checklist.
 

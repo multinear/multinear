@@ -225,10 +225,13 @@ def run_experiment(project_config: Dict[str, Any], job: JobModel, challenge_id: 
                     global_checklist = config.get("meta", {}).get("checklist", None)
                     if global_checklist and "checklist" not in task:  # avoid overriding task-specific checklist
                         task["checklist"] = global_checklist
+                    global_custom = config.get("meta", {}).get("custom", None)
+                    if global_custom and "custom" not in task:  # avoid overriding task-specific custom
+                        task["custom"] = global_custom
 
                     # Evaluate the task
                     with OutputCapture() as capture:
-                        eval_result = evaluate(task, input, task_result["output"])
+                        eval_result = evaluate(task, input, task_result["output"], task_runner_module)
                     TaskModel.evaluated(
                         task_id,
                         {k: v for k, v in task.items() if k != "input"},

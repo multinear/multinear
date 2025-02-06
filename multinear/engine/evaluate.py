@@ -1,8 +1,9 @@
 from .checklist import ChecklistClassifier2
 from .list import ListEvaluator
+from .custom import CustomEvaluator
 
 
-def evaluate(spec: dict, input: any, output: any):
+def evaluate(spec: dict, input: any, output: any, task_runner_module: any):
     """
     Evaluate an output against a specification.
 
@@ -20,6 +21,7 @@ def evaluate(spec: dict, input: any, output: any):
     context = spec.get('context', '')
 
     evaluator = None
+    result = None
     if 'checklist' in spec:
         evaluator = ChecklistClassifier2(context=context)
         result = evaluator(output, spec['checklist'], input=input)
@@ -29,10 +31,26 @@ def evaluate(spec: dict, input: any, output: any):
     else:
         raise ValueError("No evaluator specified")
 
+    if result:
+        result_score = result['score'] if isinstance(result, dict) else result.score
+    else:
+        result_score = 1
+
+    if 'custom' in spec:
+        evaluator = CustomEvaluator(spec['custom'], task_runner_module)
+        custom_result = evaluator(input, output)
+        custom_result_score = custom_result['score'] if isinstance(custom_result, dict) else custom_result.score
+        result_score = (result_score + custom_result_score) / 2
+        # merge evaluations
+        if not result:
+            result = {'metadata': {}}
+        if 'evaluations' not in result['metadata']:
+            result['metadata']['evaluations'] = []
+        result['metadata']['evaluations'] = result['metadata']['evaluations'] + custom_result['metadata']['evaluations']
+        result['metadata']['overall_score'] = result_score
+
     return {
-        'score': result['score'] if isinstance(result, dict) else result.score,
-        'passed': (
-            result['score'] if isinstance(result, dict) else result.score
-        ) >= min_score,
+        'score': result_score,
+        'passed': result_score >= min_score,
         'details': result['metadata'] if isinstance(result, dict) else result.metadata
     }
