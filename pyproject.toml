@@ -1,6 +1,6 @@
 [project]
 name = "multinear"
-version = "0.1.4"
+version = "0.1.4-dev"
 description = "Multinear platform"
 readme = "README.md"
 requires-python = ">=3.8"
