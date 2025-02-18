@@ -3,6 +3,9 @@ from typing import List
 from datetime import timezone
 import os
 from pathlib import Path
+import yaml
+import json
+import hashlib
 
 from ..api.schemas import (
     Project,
@@ -392,3 +395,52 @@ async def run_single_task(
         "status": "started",
         "total_tasks": 1,
     }
+
+
+@api_router.get("/tasks/{project_id}")
+async def get_available_tasks(project_id: str):
+    """
+    Get available tasks from config.yaml for a project.
+    """
+    try:
+        # Retrieve the project from the database
+        project = ProjectModel.find(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        # Get project config and add custom config file if specified in environment
+        project_dict = project.to_dict()
+        config_path = os.environ.get('MULTINEAR_CONFIG')
+        if config_path:
+            # Extract just the filename without path and .yaml extension
+            config_file = Path(config_path).name
+            project_dict["config_file"] = config_file
+
+        # Load config.yaml from project folder
+        project_folder = Path(project_dict["folder"])
+        config_path = project_folder / ".multinear" / project_dict.get("config_file", "config.yaml")
+        if not config_path.exists():
+            raise HTTPException(status_code=404, detail="Config file not found")
+
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+
+        # Extract tasks with their IDs and names/descriptions
+        tasks = []
+        for task in config.get("tasks", []):
+            task_info = {
+                "id": task.get("id", None),
+                "name": task.get("name", None),
+                "description": task.get("description", None),
+                "input": task.get("input", None)
+            }
+            # If no ID is provided, generate one from input
+            if not task_info["id"] and task_info["input"]:
+                task_info["id"] = hashlib.sha256(
+                    json.dumps(task_info["input"]).encode()
+                ).hexdigest()
+            tasks.append(task_info)
+
+        return {"tasks": tasks}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

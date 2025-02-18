@@ -37,6 +37,13 @@ interface RecentRunsResponse {
     total: number;
 }
 
+export interface Task {
+    id: string;
+    name?: string;
+    description?: string;
+    input?: any;
+}
+
 export async function getProjects(): Promise<Project[]> {
     const response = await fetch(`${API_URL}/projects`);
     if (!response.ok) {
@@ -114,6 +121,14 @@ export async function startSingleTask(projectId: string, challengeId: string): P
     });
     if (!response.ok) {
         throw new Error(`Failed to start task: ${response.statusText}`);
+    }
+    return response.json();
+}
+
+export async function getAvailableTasks(projectId: string): Promise<{ tasks: Task[] }> {
+    const response = await fetch(`${API_URL}/tasks/${projectId}`);
+    if (!response.ok) {
+        throw new Error(`Failed to get available tasks: ${response.statusText}`);
     }
     return response.json();
 }
