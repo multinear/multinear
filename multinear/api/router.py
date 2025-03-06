@@ -1,5 +1,5 @@
 from fastapi import BackgroundTasks, HTTPException, APIRouter, Query
-from typing import List
+from typing import List, Dict, Any
 from datetime import timezone
 import os
 from pathlib import Path
@@ -18,7 +18,12 @@ from ..engine.run import run_experiment
 from ..engine.storage import ProjectModel, JobModel, TaskModel, TaskStatus
 
 
-def background_job(project_id: str, job_id: str, challenge_id: str | None = None):
+def background_job(
+    project_id: str,
+    job_id: str,
+    challenge_id: str | None = None,
+    group_id: str | None = None,
+):
     """
     Execute a background job to run an experiment for the specified project.
 
@@ -32,6 +37,7 @@ def background_job(project_id: str, job_id: str, challenge_id: str | None = None
         project_id (str): The ID of the project.
         job_id (str): The ID of the job to execute.
         challenge_id (str | None): If provided, only run the task with this challenge ID.
+        group_id (str | None): If provided, only run tasks from the specified group.
     """
     try:
         # Retrieve the project and job from the database
@@ -47,7 +53,7 @@ def background_job(project_id: str, job_id: str, challenge_id: str | None = None
             project_dict["config_file"] = config_file
 
         # Run the experiment and handle status updates
-        for update in run_experiment(project_dict, job, challenge_id):
+        for update in run_experiment(project_dict, job, challenge_id, group_id):
             # Add status map from TaskModel to the update
             update["status_map"] = TaskModel.get_status_map(job_id)
 
@@ -56,7 +62,7 @@ def background_job(project_id: str, job_id: str, challenge_id: str | None = None
                 status=update["status"],
                 total_tasks=update.get("total", 0),
                 current_task=update.get("current"),
-                details=update
+                details=update,
             )
 
         # Mark the job as finished upon successful completion
@@ -68,10 +74,7 @@ def background_job(project_id: str, job_id: str, challenge_id: str | None = None
         job = JobModel.find(job_id)
         job.update(
             status="failed",
-            details={
-                "error": str(e),
-                "status_map": TaskModel.get_status_map(job_id)
-            }
+            details={"error": str(e), "status_map": TaskModel.get_status_map(job_id)},
         )
 
 
@@ -123,7 +126,7 @@ async def create_job(project_id: str, background_tasks: BackgroundTasks):
         status=TaskStatus.STARTING,
         total_tasks=0,
         task_status_map={},
-        details={}
+        details={},
     )
 
 
@@ -159,7 +162,7 @@ async def get_job_status(project_id: str, job_id: str):
         total_tasks=job.total_tasks,
         current_task=job.current_task,
         task_status_map=details.get("status_map", {}),
-        details=details
+        details=details,
     )
 
 
@@ -213,7 +216,7 @@ async def get_recent_runs(
             )
             regression = total - passed - failed
             if total > 0:
-                score = (passed / total)
+                score = passed / total
 
         # Append the run details to the list
         runs.append(
@@ -324,14 +327,12 @@ async def get_run_details(run_id: str):
     return FullRunDetails(
         id=run_id,
         project=Project(
-            id=project.id,
-            name=project.name,
-            description=project.description
+            id=project.id, name=project.name, description=project.description
         ),
         details=job.details or {},
         date=job.created_at.replace(tzinfo=timezone.utc).isoformat(),
         status=job.status,
-        tasks=task_details
+        tasks=task_details,
     )
 
 
@@ -397,10 +398,78 @@ async def run_single_task(
     }
 
 
+@api_router.post("/jobs/{project_id}/group/{group_id}")
+async def run_group_tasks(
+    project_id: str,
+    group_id: str,
+    background_tasks: BackgroundTasks,
+):
+    """
+    Start a new job that runs all tasks from the specified group.
+
+    Args:
+        project_id (str): The ID of the project.
+        group_id (str): The ID of the group to run tasks from.
+        background_tasks: FastAPI background tasks handler.
+
+    Returns:
+        JobResponse: Details of the created job.
+    """
+    # Verify that the project exists
+    project = ProjectModel.find(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Create a new job
+    job_id = JobModel.start(project_id)
+
+    # Start the background task
+    background_tasks.add_task(background_job, project_id, job_id, None, group_id)
+
+    return {
+        "project_id": project_id,
+        "job_id": job_id,
+        "status": "started",
+    }
+
+
+def _process_task(task: Dict[str, Any], group_id: str = None) -> Dict[str, Any]:
+    """
+    Process a task from config.yaml and return a standardized task info dictionary.
+
+    Args:
+        task: The task dictionary from config.yaml
+        group_id: Optional group ID to prefix the task ID with
+
+    Returns:
+        Dict containing standardized task information
+    """
+    task_info = {
+        "id": task.get("id", None),
+        "name": task.get("name", None),
+        "description": task.get("description", None),
+        "input": task.get("input", None),
+    }
+
+    # If no ID is provided, generate one from input
+    if not task_info["id"] and task_info["input"]:
+        task_info["id"] = hashlib.sha256(
+            json.dumps(task_info["input"]).encode()
+        ).hexdigest()
+
+    # Add group_id prefix to task id for proper identification if provided
+    if task_info["id"] and group_id:
+        task_info["id"] = f"{group_id}/{task_info['id']}"
+
+    return task_info
+
+
 @api_router.get("/tasks/{project_id}")
 async def get_available_tasks(project_id: str):
     """
-    Get available tasks from config.yaml for a project.
+    Get available tasks and groups from config.yaml for a project.
+
+    Returns both a list of root-level tasks and a structured list of groups with their tasks.
     """
     try:
         # Retrieve the project from the database
@@ -418,29 +487,41 @@ async def get_available_tasks(project_id: str):
 
         # Load config.yaml from project folder
         project_folder = Path(project_dict["folder"])
-        config_path = project_folder / ".multinear" / project_dict.get("config_file", "config.yaml")
+        config_path = (
+            project_folder
+            / ".multinear"
+            / project_dict.get("config_file", "config.yaml")
+        )
         if not config_path.exists():
             raise HTTPException(status_code=404, detail="Config file not found")
 
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
 
-        # Extract tasks with their IDs and names/descriptions
-        tasks = []
-        for task in config.get("tasks", []):
-            task_info = {
-                "id": task.get("id", None),
-                "name": task.get("name", None),
-                "description": task.get("description", None),
-                "input": task.get("input", None)
-            }
-            # If no ID is provided, generate one from input
-            if not task_info["id"] and task_info["input"]:
-                task_info["id"] = hashlib.sha256(
-                    json.dumps(task_info["input"]).encode()
-                ).hexdigest()
-            tasks.append(task_info)
+        # Extract root-level tasks only
+        root_tasks = [_process_task(task) for task in config.get("tasks", [])]
 
-        return {"tasks": tasks}
+        # Extract groups and their tasks
+        groups = []
+        if "groups" in config:
+            for group in config["groups"]:
+                group_id = group.get("id", "")
+
+                # Process tasks in this group
+                group_tasks = [
+                    _process_task(task, group_id) for task in group.get("tasks", [])
+                ]
+
+                # Create group info
+                group_info = {
+                    "id": group_id,
+                    "name": group.get("name", ""),
+                    "description": group.get("description", ""),
+                    "task_count": len(group_tasks),
+                    "tasks": group_tasks,
+                }
+                groups.append(group_info)
+
+        return {"tasks": root_tasks, "groups": groups}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

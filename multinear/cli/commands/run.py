@@ -12,6 +12,7 @@ from ...engine.storage import JobModel, TaskModel
 def add_parser(subparsers):
     parser = subparsers.add_parser('run', help='Run experiment and track progress')
     parser.add_argument('--config', type=str, help='Name of custom config.yaml file')
+    parser.add_argument('--group', type=str, help='Run only tasks from the specified group')
     parser.set_defaults(func=handle)
 
 
@@ -36,7 +37,8 @@ def handle(args):
         if args.config:
             project_dict["config_file"] = args.config + ".yaml"
 
-        for update in run_experiment(project_dict, job):
+        # Run the experiment with optional group filtering
+        for update in run_experiment(project_dict, job, group_id=args.group):
             results.append(update)
 
             # Add status map from TaskModel to the update

@@ -45,6 +45,19 @@ export interface Task {
     input?: any;
 }
 
+export interface Group {
+    id: string;
+    name: string;
+    description: string;
+    task_count: number;
+    tasks: Task[];
+}
+
+export interface TasksResponse {
+    tasks: Task[];
+    groups: Group[];
+}
+
 export async function getProjects(): Promise<Project[]> {
     const response = await fetch(`${API_URL}/projects`);
     if (!response.ok) {
@@ -126,10 +139,23 @@ export async function startSingleTask(projectId: string, challengeId: string): P
     return response.json();
 }
 
-export async function getAvailableTasks(projectId: string): Promise<{ tasks: Task[] }> {
+export async function getAvailableTasks(projectId: string): Promise<TasksResponse> {
     const response = await fetch(`${API_URL}/tasks/${projectId}`);
     if (!response.ok) {
         throw new Error(`Failed to get available tasks: ${response.statusText}`);
+    }
+    return response.json();
+}
+
+export async function startGroupRun(projectId: string, groupId: string): Promise<JobResponse> {
+    const response = await fetch(`${API_URL}/jobs/${projectId}/group/${groupId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to start group run: ${response.statusText}`);
     }
     return response.json();
 }

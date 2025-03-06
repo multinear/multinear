@@ -1,12 +1,13 @@
 import { writable, get } from 'svelte/store';
-import { startExperiment, getJobStatus, startSingleTask } from '$lib/api';
+import { startExperiment, getJobStatus, startSingleTask, startGroupRun } from '$lib/api';
 import type { JobResponse } from '$lib/api';
 import { goto } from '$app/navigation';
 
 interface PendingRun {
-    type: 'experiment' | 'task';
+    type: 'experiment' | 'task' | 'group';
     projectId: string;
     challengeId?: string;
+    groupId?: string;
 }
 
 export const pendingRunStore = writable<PendingRun | null>(null);
@@ -98,14 +99,30 @@ export async function handleRerunTask(projectId: string, challengeId: string, re
     goto('/');
 }
 
+export async function handleRunGroup(projectId: string, groupId: string, reloadRecentRuns: () => Promise<void>) {
+    pendingRunStore.set({
+        type: 'group',
+        projectId,
+        groupId
+    });
+    goto('/');
+}
+
 export async function executePendingRun(reloadRecentRuns: () => Promise<void>) {
     const pendingRun = get(pendingRunStore);
     if (!pendingRun) return;
     
     try {
-        const data = pendingRun.type === 'experiment' 
-            ? await startExperiment(pendingRun.projectId)
-            : await startSingleTask(pendingRun.projectId, pendingRun.challengeId!);
+        let data;
+        if (pendingRun.type === 'experiment') {
+            data = await startExperiment(pendingRun.projectId);
+        } else if (pendingRun.type === 'task') {
+            data = await startSingleTask(pendingRun.projectId, pendingRun.challengeId!);
+        } else if (pendingRun.type === 'group') {
+            data = await startGroupRun(pendingRun.projectId, pendingRun.groupId!);
+        } else {
+            throw new Error('Unknown run type');
+        }
             
         const jobId = data.job_id;
 
