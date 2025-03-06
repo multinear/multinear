@@ -33,9 +33,16 @@ frontend_build:
 frontend_dev:
 	cd multinear/frontend && npm run dev
 
+# Run frontend in development mode on port 8100 (instead of 8000 - in case of port conflicts)
+.PHONY: frontend_dev_8100
+frontend_dev_8100:
+	cd multinear/frontend && VITE_API_URL=http://localhost:8100/api npm run dev
+
+
 # Build: 
 # 	1. make frontend_build
 #	2. update pyproject.toml + setup.py <version>
 # 	3. python -m build
 #	4. twine upload dist/*
 #	5. git tag <version>
+#   6. git push --tags
