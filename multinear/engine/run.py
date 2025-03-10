@@ -12,6 +12,7 @@ from .evaluate import evaluate
 from ..utils.capture import OutputCapture
 from ..utils.git import get_git_revision
 from .utils import rephrase_input
+from .run_select import select_tasks
 
 
 def run_group(
@@ -205,8 +206,8 @@ def run_experiment(
 
         # Save git revision to job details
         git_revision = get_git_revision(project_folder)
-        print(f"Git revision: {git_revision}")
-        job.update(details={"git_revision": get_git_revision(project_folder)})
+        # print(f"Git revision: {git_revision}")
+        job.update(details={"git_revision": git_revision})
 
         if not config_path.exists():
             raise FileNotFoundError(f"Config file not found at {config_path}")
@@ -279,78 +280,9 @@ def run_experiment(
                 return
 
         # Determine tasks to run based on config structure and filters
-        all_tasks = []
+        all_tasks = select_tasks(config, challenge_id, group_id)
+
         global_repeat = config.get("meta", {}).get("repeat", 1)
-
-        if "groups" in config:
-            # Using groups structure
-            if group_id:
-                # Filter to only include tasks from the specified group
-                for group in config["groups"]:
-                    if group.get("id") == group_id and "tasks" in group:
-                        if challenge_id:
-                            # Filter tasks by challenge_id
-                            clean_challenge_id = challenge_id
-                            if (
-                                "_" in challenge_id
-                                and challenge_id.split("_")[1].isdigit()
-                            ):
-                                clean_challenge_id = challenge_id.split("_")[0]
-                            tasks = [
-                                t
-                                for t in group["tasks"]
-                                if t.get("id") == clean_challenge_id
-                            ]
-                            if tasks:
-                                all_tasks.append({"group_id": group_id, "tasks": tasks})
-                        else:
-                            all_tasks.append(
-                                {"group_id": group_id, "tasks": group["tasks"]}
-                            )
-                        break
-                if not all_tasks:
-                    raise ValueError(
-                        f"No group found with ID {group_id} or no matching tasks"
-                    )
-            else:
-                # Include tasks from all groups
-                for group in config["groups"]:
-                    if "tasks" in group:
-                        group_tasks = group["tasks"]
-                        if challenge_id:
-                            # Filter tasks by challenge_id
-                            clean_challenge_id = challenge_id
-                            if (
-                                "_" in challenge_id
-                                and challenge_id.split("_")[1].isdigit()
-                            ):
-                                clean_challenge_id = challenge_id.split("_")[0]
-                            group_tasks = [
-                                t
-                                for t in group_tasks
-                                if t.get("id") == clean_challenge_id
-                            ]
-                        if group_tasks:
-                            all_tasks.append(
-                                {
-                                    "group_id": group.get("id", "unknown"),
-                                    "tasks": group_tasks,
-                                }
-                            )
-        elif "tasks" in config:
-            # Using traditional tasks structure
-            tasks = config["tasks"]
-            if challenge_id:
-                # Filter tasks by challenge_id
-                clean_challenge_id = challenge_id
-                if "_" in challenge_id and challenge_id.split("_")[1].isdigit():
-                    clean_challenge_id = challenge_id.split("_")[0]
-                tasks = [t for t in tasks if t.get("id") == clean_challenge_id]
-            if tasks:
-                all_tasks.append({"group_id": None, "tasks": tasks})
-
-        if not all_tasks:
-            raise ValueError("No tasks to run found in config.yaml")
 
         # Calculate total tasks across all groups
         total_tasks = 0
