@@ -3,7 +3,8 @@ from typing import List
 
 
 BASE_REPHRASE_PROMPT = """Rephrase the following text in a different way
-while fully preserving its meaning. Preserve the language and style."""
+while fully preserving its meaning. Important: preserve the language and style.
+The rephrased text should sound as natural as the original text."""
 
 VARIATIONS_EXTENSION = """
 IMPORTANT: Your rephrasing must be different from all previous variations listed below.
