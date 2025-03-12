@@ -1,7 +1,78 @@
 <script lang="ts">
     import { jobStore } from '$lib/stores/jobs';
-    import { AlertCircle } from 'lucide-svelte';
+    import { AlertCircle, Clock } from 'lucide-svelte';
     import * as Alert from '$lib/components/ui/alert';
+    import { onMount, onDestroy } from 'svelte';
+    import { intervalToDuration } from 'date-fns';
+
+    // Timer state
+    let elapsedTime = '';
+    let timerInterval: ReturnType<typeof setInterval> | null = null;
+
+    // Format time as (H:)MM:SS
+    function formatElapsedTime(startTime: Date | null): string {
+        if (!startTime) return '00:00';
+        
+        const now = new Date();
+        const duration = intervalToDuration({ start: startTime, end: now });
+        
+        const hours = duration.hours || 0;
+        const minutes = duration.minutes || 0;
+        const seconds = duration.seconds || 0;
+        
+        if (hours > 0) {
+            return `${hours}:${minutes}:${seconds.toString().padStart(2, '0')}`;
+        } else {
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+    }
+
+    // Update timer every second
+    function startTimer() {
+        if (timerInterval) clearInterval(timerInterval);
+        
+        timerInterval = setInterval(() => {
+            if ($jobStore.startTime) {
+                elapsedTime = formatElapsedTime($jobStore.startTime);
+            }
+        }, 1000);
+        
+        // Initial update
+        if ($jobStore.startTime) {
+            elapsedTime = formatElapsedTime($jobStore.startTime);
+        }
+    }
+
+    function stopTimer() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+    }
+
+    // Start timer when component mounts
+    onMount(() => {
+        if ($jobStore.jobStatus !== 'completed' && $jobStore.jobStatus !== 'failed') {
+            startTimer();
+        } else if ($jobStore.startTime) {
+            // Just set the final time without starting the timer
+            elapsedTime = formatElapsedTime($jobStore.startTime);
+        }
+    });
+
+    // Clean up timer when component is destroyed
+    onDestroy(() => {
+        stopTimer();
+    });
+
+    // Watch for job status changes
+    $: {
+        if ($jobStore.jobStatus === 'completed' || $jobStore.jobStatus === 'failed') {
+            stopTimer();
+        } else if ($jobStore.startTime && !timerInterval) {
+            startTimer();
+        }
+    }
 </script>
 
 {#if $jobStore.currentJob}
@@ -11,6 +82,9 @@
             <span>{$jobStore.currentJob.slice(-8)}</span>
             <span class={`text-gray-500 ${$jobStore.jobStatus === 'failed' || $jobStore.jobStatus === 'error' ? 'text-red-500' : ''}`}>
                 Status: {$jobStore.jobStatus}
+            </span>
+            <span class="ml-auto text-gray-500 flex items-center gap-1">
+                <Clock class="h-4 w-4" /> {elapsedTime}
             </span>
         </div>
         {#if $jobStore.jobDetails}

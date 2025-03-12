@@ -17,6 +17,7 @@ export interface JobState {
     jobStatus: string | null;
     jobDetails: JobResponse | null;
     taskStatusCounts: Record<string, number>;
+    startTime: Date | null;
 }
 
 export const jobStore = writable<JobState>({
@@ -24,6 +25,7 @@ export const jobStore = writable<JobState>({
     jobStatus: null,
     jobDetails: null,
     taskStatusCounts: {},
+    startTime: null,
 });
 
 export async function pollJobStatus(projectId: string, jobId: string, reloadRecentRuns: () => Promise<void>) {
@@ -49,12 +51,13 @@ export async function pollJobStatus(projectId: string, jobId: string, reloadRece
                 statusData.error = statusData.details.error;
             }
 
-            jobStore.set({
+            jobStore.update(state => ({
                 currentJob: jobId,
                 jobStatus: status,
                 jobDetails: statusData,
                 taskStatusCounts: counts,
-            });
+                startTime: state.startTime,
+            }));
 
             if (status === 'completed' && !statusData.details?.error) {
                 await reloadRecentRuns();
@@ -63,7 +66,7 @@ export async function pollJobStatus(projectId: string, jobId: string, reloadRece
             }
         } catch (error) {
             console.error('Error polling job status:', error);
-            jobStore.set({
+            jobStore.update(state => ({
                 currentJob: jobId,
                 jobStatus: 'failed',
                 jobDetails: {
@@ -76,7 +79,8 @@ export async function pollJobStatus(projectId: string, jobId: string, reloadRece
                     error: error instanceof Error ? error.message : 'Unknown error occurred'
                 },
                 taskStatusCounts: {},
-            });
+                startTime: state.startTime,
+            }));
             break;
         }
     }
@@ -132,6 +136,7 @@ export async function executePendingRun(reloadRecentRuns: () => Promise<void>) {
             jobStatus: 'started',
             jobDetails: null,
             taskStatusCounts: {},
+            startTime: new Date(),
         }));
 
         await pollJobStatus(pendingRun.projectId, jobId, reloadRecentRuns);
@@ -150,6 +155,7 @@ export async function executePendingRun(reloadRecentRuns: () => Promise<void>) {
                 error: error instanceof Error ? error.message : 'Unknown error occurred'
             },
             taskStatusCounts: {},
+            startTime: new Date(),
         });
     } finally {
         pendingRunStore.set(null);
