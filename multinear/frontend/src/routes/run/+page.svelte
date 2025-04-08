@@ -21,7 +21,8 @@
     import { marked } from 'marked';
     import { Switch } from "$lib/components/ui/switch";
     import EvaluationResults from '$lib/components/EvaluationResults.svelte';
-    import { truncateText } from '$lib/utils/scores';
+    // @ts-ignore - Split.js doesn't have TypeScript definitions by default
+    import Split from 'split.js';
 
 
     let runId: string | null = null;
@@ -31,6 +32,8 @@
     let expandedTaskId: string | null = null;
     let showOutputMarkdown = false;
     let showPromptMarkdown = false;
+    let taskSplitSizes = new Map<string, number[]>();
+    let splitInstances = new Map<string, any>();
 
     $: {
         if ($selectedRunId) loadRunDetails($selectedRunId);
@@ -79,6 +82,10 @@
             ? filteredTasks.findIndex(t => t.id === expandedTaskId)
             : -1;
         
+        if (expandedTaskId) {
+            cleanupSplitter(expandedTaskId);
+        }
+        
         const nextIndex = currentIndex < filteredTasks.length - 1 
             ? currentIndex + 1 
             : 0;
@@ -93,6 +100,10 @@
         const currentIndex = expandedTaskId 
             ? filteredTasks.findIndex(t => t.id === expandedTaskId)
             : 0;
+        
+        if (expandedTaskId) {
+            cleanupSplitter(expandedTaskId);
+        }
         
         const previousIndex = currentIndex > 0 
             ? currentIndex - 1 
@@ -142,9 +153,114 @@
 
         return '<1 second';
     }
+
+    function initSplitter(taskId: string) {
+        // Destroy existing split instance if any
+        if (splitInstances.has(taskId)) {
+            splitInstances.get(taskId).destroy();
+            splitInstances.delete(taskId);
+        }
+
+        // Wait for DOM to update
+        tick().then(() => {
+            const leftPane = document.getElementById(`task-details-${taskId}`);
+            const rightPane = document.getElementById(`eval-details-${taskId}`);
+            
+            if (!leftPane || !rightPane) return;
+            
+            // Get stored sizes or use default
+            const sizes = taskSplitSizes.get(taskId) || [50, 50];
+            
+            const split = Split([leftPane, rightPane], {
+                sizes: sizes,
+                minSize: 200,
+                gutterSize: 10,
+                snapOffset: 30,
+                dragInterval: 1,
+                onDragEnd: function(sizes: number[]) {
+                    // Store sizes for this task
+                    taskSplitSizes.set(taskId, sizes);
+                }
+            });
+            
+            splitInstances.set(taskId, split);
+        });
+    }
+
+    function cleanupSplitter(taskId: string) {
+        if (splitInstances.has(taskId)) {
+            splitInstances.get(taskId).destroy();
+            splitInstances.delete(taskId);
+        }
+    }
+
+    $: if (expandedTaskId) {
+        tick().then(() => {
+            if (expandedTaskId) {
+                initSplitter(expandedTaskId);
+            }
+        });
+    }
+
+    // Make sure we get clean unmount of the splitter
+    $: if (expandedTaskId === null) {
+        // No expanded tasks, clean up any stray splitters
+        for (const [taskId, instance] of splitInstances.entries()) {
+            cleanupSplitter(taskId);
+        }
+    }
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
+
+<style>
+    /* Styles for Split.js */
+    :global(.gutter) {
+        background-color: transparent; /* Make base transparent */
+        background-repeat: no-repeat;
+        background-position: 50%;
+        margin: 0;
+        position: relative;
+        width: 10px !important;
+    }
+
+    :global(.gutter.gutter-horizontal) {
+        cursor: col-resize;
+        width: 10px !important;
+    }
+    
+    /* Add a thin visible line in the center of the gutter */
+    :global(.gutter.gutter-horizontal::after) {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 1px;
+        height: 100%;
+        background-color: #e5e7eb; /* gray-200 */
+        transition: background-color 0.15s ease;
+    }
+    
+    /* Highlight the visible line on hover */
+    :global(.gutter.gutter-horizontal:hover::after) {
+        background-color: #d1d5db; /* gray-300 */
+        box-shadow: 0 0 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .split-container {
+        display: flex;
+        width: 100%;
+        overflow: hidden;
+    }
+    
+    .split-pane {
+        overflow-y: auto;
+        overflow-x: hidden;
+        min-height: 300px;
+        transition: width 10ms;
+    }
+</style>
 
 <div class="container mx-auto p-4">
     {#if runDetails}
@@ -240,8 +356,14 @@
                                     data-task-id={task.id}
                                     class={`cursor-pointer ${statusClass}`}
                                     on:click={() => {
-                                        expandedTaskId = isExpanded ? null : task.id;
-                                        if (isExpanded) scrollToExpandedTask();
+                                        if (expandedTaskId === task.id) {
+                                            cleanupSplitter(task.id);
+                                            expandedTaskId = null;
+                                        } else {
+                                            if (expandedTaskId) cleanupSplitter(expandedTaskId);
+                                            expandedTaskId = task.id;
+                                            scrollToExpandedTask();
+                                        }
                                     }}
                                 >
                                     <Table.Cell class="w-4">
@@ -297,10 +419,10 @@
                                 </Table.Row>
                                 {#if isExpanded}
                                     <Table.Row class="bg-gray-50 hover:bg-gray-50">
-                                        <Table.Cell colspan={8} class="border-t border-gray-100">
-                                            <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <Table.Cell colspan={8} class="border-t border-gray-100 p-0">
+                                            <div class="p-4 split-container">
                                                 <!-- Task Details Column -->
-                                                <div class="space-y-4 pr-12 border-r border-gray-200">
+                                                <div id={`task-details-${task.id}`} class="split-pane space-y-4 px-4">
                                                     <div class="flex items-center mb-2">
                                                         <h4 class="font-semibold text-lg">
                                                             Task Details 
@@ -459,7 +581,7 @@
                                                 </div>
 
                                                 <!-- Evaluation Details Column -->
-                                                <div class="space-y-4 pl-4">
+                                                <div id={`eval-details-${task.id}`} class="split-pane space-y-4 px-4">
                                                     <div class="flex items-center mb-2">
                                                         <h4 class="font-semibold text-lg">
                                                             Evaluation
