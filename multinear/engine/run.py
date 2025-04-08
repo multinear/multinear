@@ -29,6 +29,7 @@ def run_experiment(
         Dict containing status updates, final results, and status map
     """
     try:
+        console = Console()
         # Get the project folder path
         project_folder = Path(project_config["folder"])
 
@@ -134,6 +135,8 @@ def run_experiment(
         current_task_offset = 0
 
         for group_data in all_tasks:
+            console.print(f"[green bold]Running group: {group_data['group_id']}[/green bold]")
+
             # Run the group and collect results
             group_tasks = group_data["tasks"]
 

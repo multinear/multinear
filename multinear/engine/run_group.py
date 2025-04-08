@@ -244,6 +244,8 @@ def run_group(
 
     # Create thread pool
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        console = Console()
+
         # Process each task group sequentially, but execute tasks in parallel
         futures = []
 
@@ -252,6 +254,8 @@ def run_group(
             previous_variations = group["previous_variations"]
 
             for execution in group["executions"]:
+                console.print(f"[blue bold]Running task {task_id} {execution['task_number']}/{total_tasks}[/blue bold]")
+
                 repeat = execution["repeat"]
                 task_number = execution["task_number"]
 

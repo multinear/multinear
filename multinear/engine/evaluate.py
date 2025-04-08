@@ -3,7 +3,7 @@ from .list import ListEvaluator
 from .custom import CustomEvaluator
 
 
-def evaluate(spec: dict, input: any, output: any, task_runner_module: any):
+def evaluate_metric(spec: dict, input: any, output: any, task_runner_module: any) -> dict:
     """
     Evaluate an output against a specification.
 
@@ -15,12 +15,11 @@ def evaluate(spec: dict, input: any, output: any, task_runner_module: any):
     Returns:
         A dictionary containing the evaluation result.
     """
-    # Set the minimum score required to pass
+    # 1) Determine min_score
     min_score = spec.get('min_score', 1.0)
-
     context = spec.get('context', '')
 
-    evaluator = None
+    # 2) Evaluate
     result = None
     if 'checklist' in spec:
         evaluator = ChecklistClassifier2(context=context)
@@ -36,6 +35,7 @@ def evaluate(spec: dict, input: any, output: any, task_runner_module: any):
     else:
         result_score = 1
 
+    # 3) Custom evaluator
     if 'custom' in spec:
         evaluator = CustomEvaluator(spec['custom'], task_runner_module)
         custom_result = evaluator(input, output)
@@ -49,8 +49,76 @@ def evaluate(spec: dict, input: any, output: any, task_runner_module: any):
         result['metadata']['evaluations'] = result['metadata']['evaluations'] + custom_result['metadata']['evaluations']
         result['metadata']['overall_score'] = result_score
 
+    # 4) Normalize result to { 'score': ..., 'passed': bool, 'metadata': {...} }
+    if result is None:
+        # default to fail
+        return {'score': 0.0, 'passed': False, 'details': {}}
+    if isinstance(result, dict):
+        # autoevals returns dict with 'score'? or see if it's an autoevals.Score object
+        result_score = result.get('score', 1.0)
+        passed = result.get('passed', result_score >= min_score)
+        details = result.get('metadata', {})
+    else:
+        # it might be autoevals.Score
+        result_score = result.score
+        passed = (result_score >= min_score)
+        details = result.metadata
+
     return {
         'score': result_score,
-        'passed': result_score >= min_score,
-        'details': result['metadata'] if isinstance(result, dict) else result.metadata
+        'passed': passed,
+        'details': details
     }
+
+
+def evaluate(spec: dict, input: any, output: any, task_runner_module: any):
+    """
+    Evaluate an output against a specification. Either:
+       - spec.metrics: array of metric items
+       - or the single-type approach (checklist, list, or custom).
+
+    Returns:
+        A dictionary containing the evaluation result.
+    """
+    # If 'metrics' is present, do multi-metric logic
+    if 'metrics' in spec:
+        metric_items = spec['metrics']
+        if not isinstance(metric_items, list):
+            raise ValueError("metrics must be a list of items")
+
+        all_metric_results = []
+        total_score = 0.0
+        for metric in metric_items:
+            # Each metric can have its own 'type', 'checklist', 'list', etc.
+            metric_type = metric.get('type', 'untitled')
+
+            # Evaluate just this metric
+            single_result = evaluate_metric(metric, input, output, task_runner_module)
+            single_score = single_result['score']
+
+            # Enrich with the metric_type for clarity
+            single_result['metric_type'] = metric_type
+
+            all_metric_results.append(single_result)
+            total_score += single_score
+
+        # Compute average across all metrics
+        if len(all_metric_results) > 0:
+            final_score = total_score / len(all_metric_results)
+        else:
+            final_score = 0.0  # default to fail
+
+        # Require all metrics pass
+        all_passed = all(r['passed'] for r in all_metric_results)
+
+        return {
+            'score': final_score,
+            'passed': all_passed,
+            'details': {
+                'metrics': all_metric_results,
+                'overall_score': final_score
+            }
+        }
+
+    # Else fallback to old single-check approach:
+    return evaluate_metric(spec, input, output, task_runner_module)
