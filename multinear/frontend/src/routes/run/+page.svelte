@@ -23,6 +23,7 @@
     import EvaluationResults from '$lib/components/EvaluationResults.svelte';
     // @ts-ignore - Split.js doesn't have TypeScript definitions by default
     import Split from 'split.js';
+    import ScoreCircle from '$lib/components/ScoreCircle.svelte';
 
 
     let runId: string | null = null;
@@ -405,6 +406,13 @@
                                                         style="width: {(1 / task.eval_details.evaluations.length * 100).toFixed(0)}%"
                                                     ></div>
                                                 {/each}
+                                            {:else if task.eval_details?.metrics}
+                                                {#each task.eval_details.metrics as metric}
+                                                    <div
+                                                        class="h-4 min-w-[5px] {metric.score >= 1 ? 'bg-green-600' : metric.score > 0 ? 'bg-yellow-400' : 'bg-red-600'}"
+                                                        style="width: {(1 / task.eval_details.metrics.length * 100).toFixed(0)}%"
+                                                    ></div>
+                                                {/each}
                                             {:else}
                                                 <div
                                                     class="h-4 min-w-[5px] {isPassed ? 'bg-green-600' : 'bg-red-600'}"
@@ -656,6 +664,37 @@
                                                                 />
                                                             </div>
                                                         </div>
+                                                    {:else if task.eval_details?.metrics}
+                                                        <div>
+                                                            <h4 class="font-semibold text-lg mb-4">Evaluation Results</h4>
+                                                            {#each task.eval_details.metrics as metric}
+                                                                <div class="mb-6 border rounded-lg overflow-hidden">
+                                                                    <div class="flex items-center justify-between bg-gray-100 p-3 border-b">
+                                                                        <h5 class="text-sm font-medium capitalize">{metric.metric_type}</h5>
+                                                                        <div class="flex items-center">
+                                                                            <!-- <div class="mr-2">
+                                                                                <StatusBadge status={metric.passed ? 'completed' : 'failed'} className="text-xs px-2 py-0.5" />
+                                                                            </div> -->
+                                                                            <div>
+                                                                                <ScoreCircle 
+                                                                                    score={metric.score}
+                                                                                    showMinScore={false}
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    {#if metric.details?.evaluations}
+                                                                        <div class="p-3">
+                                                                            <EvaluationResults 
+                                                                                evaluations={metric.details.evaluations}
+                                                                                evalSpec={task.eval_spec}
+                                                                                filter={evaluationFilter}
+                                                                            />
+                                                                        </div>
+                                                                    {/if}
+                                                                </div>
+                                                            {/each}
+                                                        </div>
                                                     {/if}
 
                                                     {#if task.eval_details}
@@ -663,7 +702,7 @@
                                                             <h5 class="font-semibold mb-2">Details</h5>
                                                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                                 {#each Object.entries(task.eval_details) as [key, value]}
-                                                                    {#if key !== 'evaluations'}
+                                                                    {#if key !== 'evaluations' && key !== 'metrics'}
                                                                         <div>
                                                                             <div class="text-sm font-medium text-gray-600 mb-1">{key}</div>
                                                                             <div class="bg-white p-3 rounded border border-gray-200 whitespace-pre-wrap font-mono text-xs">

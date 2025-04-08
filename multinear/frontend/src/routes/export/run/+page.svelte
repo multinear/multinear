@@ -241,6 +241,7 @@
                             <!-- Right Column: Evaluation -->
                             <div class="space-y-6 lg:border-l lg:pl-8">
                                 {#if task.eval_details?.evaluations}
+                                    <!-- Old structure with direct evaluations -->
                                     <div>
                                         <h4 class="text-sm font-semibold mb-3">Evaluation Results</h4>
                                         <EvaluationResults 
@@ -250,6 +251,42 @@
                                             filter={""}
                                         />
                                     </div>
+                                {:else if task.eval_details?.metrics}
+                                    <!-- New structure with metrics array -->
+                                    <div>
+                                        <h4 class="text-sm font-semibold mb-3">Evaluation Results</h4>
+                                        {#each task.eval_details.metrics as metric}
+                                            <div class="mb-4 border rounded-lg overflow-hidden">
+                                                <div class="flex items-center justify-between bg-gray-100 p-3 border-b">
+                                                    <h5 class="text-sm font-medium capitalize">{metric.metric_type}</h5>
+                                                    <div class="flex items-center">
+                                                        {#if metric.passed !== undefined}
+                                                            <span class="mr-2 text-xs px-2 py-0.5 rounded-full {metric.passed ? 'bg-green-100 text-green-800 print:bg-green-50 border border-green-300' : 'bg-red-100 text-red-800 print:bg-red-50 border border-red-300'}">
+                                                                {metric.passed ? 'Passed' : 'Failed'}
+                                                            </span>
+                                                        {/if}
+                                                        <div>
+                                                            <ScoreCircle 
+                                                                score={metric.score} 
+                                                                includePrintStyles={true}
+                                                                showMinScore={false}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {#if metric.details?.evaluations}
+                                                    <div class="p-3">
+                                                        <EvaluationResults 
+                                                            evaluations={metric.details.evaluations}
+                                                            evalSpec={task.eval_spec}
+                                                            includePrintStyles={true}
+                                                            filter={""}
+                                                        />
+                                                    </div>
+                                                {/if}
+                                            </div>
+                                        {/each}
+                                    </div>
                                 {/if}
 
                                 {#if task.eval_details}
@@ -257,7 +294,7 @@
                                         <h4 class="text-sm font-semibold mb-2">Evaluation Details</h4>
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             {#each Object.entries(task.eval_details) as [key, value]}
-                                                {#if key !== 'evaluations'}
+                                                {#if key !== 'evaluations' && key !== 'metrics'}
                                                     <div>
                                                         <div class="text-sm font-medium text-gray-600 mb-1">{key}</div>
                                                         <div class="bg-gray-50 p-3 rounded border border-gray-200 whitespace-pre-wrap font-mono text-xs">
