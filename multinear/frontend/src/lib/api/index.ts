@@ -26,6 +26,7 @@ export interface RecentRun {
     model: string;
     score: number;
     totalTests: number;
+    task_id?: string;
     pass: number;
     fail: number;
     regression: number;

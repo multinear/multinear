@@ -225,6 +225,16 @@ class JobModel(Base):
             else:
                 return "multiple"
 
+    def get_single_task_challenge_id(self) -> Optional[str]:
+        """
+        Get the challenge ID if this job contains exactly one task.
+        """
+        with db_context() as db:
+            tasks = db.query(TaskModel).filter(TaskModel.job_id == self.id).all()
+            if len(tasks) == 1:
+                return tasks[0].challenge_id
+            return None
+
     @classmethod
     def count_jobs(cls, project_id: str) -> int:
         """

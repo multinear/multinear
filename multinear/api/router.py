@@ -204,6 +204,7 @@ async def get_recent_runs(
         # Initialize statistics for the run
         total = passed = failed = regression = score = 0
         task_status_map = job_data.get("status_map", {})
+        task_id = None
         if task_status_map:
             total = len(task_status_map)
             passed = sum(
@@ -217,6 +218,8 @@ async def get_recent_runs(
             regression = total - passed - failed
             if total > 0:
                 score = passed / total
+            if total == 1:
+                task_id = job.get_single_task_challenge_id()
 
         # Append the run details to the list
         runs.append(
@@ -235,6 +238,7 @@ async def get_recent_runs(
                 "pass": passed,
                 "fail": failed,
                 "regression": regression,
+                "task_id": task_id,
                 # "bookmarked": False,
                 # "noted": False
             }

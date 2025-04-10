@@ -33,6 +33,7 @@ class RecentRun(BaseModel):
     model: str
     score: float
     totalTests: int
+    task_id: Optional[str] = None
     pass_: int = Field(alias='pass')  # 'pass' is a Python keyword, so we use an alias
     fail: int
     regression: int

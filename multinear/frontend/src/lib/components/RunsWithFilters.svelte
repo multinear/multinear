@@ -270,8 +270,9 @@
                     <Table.Head>Run ID</Table.Head>
                     <Table.Head>Date & Time</Table.Head>
                     <Table.Head>Duration</Table.Head>
-                    <Table.Head>Code Revision</Table.Head>
+                    <!-- <Table.Head>Code Revision</Table.Head> -->
                     <Table.Head>Model Version</Table.Head>
+                    <Table.Head>Task ID</Table.Head>
                     <Table.Head>Total Tests</Table.Head>
                     <Table.Head>Evaluation Score</Table.Head>
                     <Table.Head>Test Results</Table.Head>
@@ -305,8 +306,20 @@
                                 -
                             {/if}
                         </Table.Cell>
-                        <Table.Cell>{run.revision.slice(-8)}</Table.Cell>
+                        <!-- <Table.Cell>{run.revision.slice(-8)}</Table.Cell> -->
                         <Table.Cell>{run.model}</Table.Cell>
+                        <Table.Cell>
+                            {#if run.task_id}
+                                <Tooltip.Root>
+                                    <Tooltip.Trigger>{run.task_id}</Tooltip.Trigger>
+                                    <Tooltip.Content>
+                                        <p>Task ID: {run.task_id}</p>
+                                    </Tooltip.Content>
+                                </Tooltip.Root>
+                            {:else}
+                                -
+                            {/if}
+                        </Table.Cell>
                         <Table.Cell>{run.totalTests}</Table.Cell>
                         <Table.Cell>
                             <Badge
