@@ -10,9 +10,18 @@ export function getTaskStatus(task: any) {
 export function truncateInput(input: any, maxLength: number = 50): string {
     if (!input) return '-';
     
-    const text = typeof input === 'object' && 'str' in input 
-        ? input.str 
-        : JSON.stringify(input);
+    let text: string;
+    if (typeof input === 'object' && input !== null) {
+        if ('str' in input) {
+            text = String(input.str);
+        } else if ('question' in input) {
+            text = String(input.question);
+        } else {
+            text = JSON.stringify(input);
+        }
+    } else {
+        text = String(input);
+    }
         
     return text.length > maxLength 
         ? text.slice(0, maxLength) + '...' 

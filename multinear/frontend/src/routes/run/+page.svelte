@@ -376,7 +376,7 @@
                                         </Button>
                                     </Table.Cell>
                                     <Table.Cell class="font-medium font-mono">
-                                        {task.id.slice(-8)}
+                                        {task.challenge_id || task.id.slice(-8)}
                                     </Table.Cell>
                                     <Table.Cell>
                                         <TimeAgo date={task.created_at} />
