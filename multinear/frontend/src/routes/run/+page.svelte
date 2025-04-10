@@ -25,6 +25,9 @@
     import Split from 'split.js';
     import ScoreCircle from '$lib/components/ScoreCircle.svelte';
 
+    // Add state for expanded details
+    let expandedDetails = new Map<string, boolean>();
+    const TRUNCATE_LENGTH = 400; // Max length before truncation
 
     let runId: string | null = null;
     let runDetails: any = null;
@@ -511,10 +514,37 @@
                                                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                                 {#each Object.entries(task.task_details) as [key, value]}
                                                                     {#if !['prompt', 'reasoning'].includes(key)}
+                                                                        {@const detailMapKey = `${task.id}-${key}`}
+                                                                        {@const isExpanded = expandedDetails.get(detailMapKey) ?? false}
+
+                                                                        {@const stringValue = typeof value === 'string'
+                                                                            ? value
+                                                                            : (typeof value === 'object' && value !== null)
+                                                                                ? JSON.stringify(value, null, 2)
+                                                                                : String(value)
+                                                                        }
+                                                                        {@const needsTruncation = stringValue.length > TRUNCATE_LENGTH}
+                                                                        {@const displayValue = needsTruncation && !isExpanded
+                                                                            ? stringValue.slice(0, TRUNCATE_LENGTH) + '...'
+                                                                            : stringValue
+                                                                        }
                                                                         <div>
                                                                             <div class="text-sm font-medium text-gray-600 mb-1">{key}</div>
-                                                                            <div class="bg-white p-3 rounded border border-gray-200 whitespace-pre-wrap font-mono text-xs">
-                                                                                {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                                                                            <div class="bg-white rounded border border-gray-200 text-xs font-mono">
+                                                                                <div class="p-3 whitespace-pre-wrap">
+                                                                                    {displayValue}
+                                                                                </div>
+                                                                                {#if needsTruncation}
+                                                                                    <button
+                                                                                        class="w-full px-4 py-2 border-t border-gray-200 text-left text-sm text-gray-600 cursor-pointer hover:bg-gray-50 font-sans"
+                                                                                        on:click={() => {
+                                                                                            expandedDetails.set(detailMapKey, !isExpanded);
+                                                                                            expandedDetails = expandedDetails; // Trigger reactivity
+                                                                                        }}
+                                                                                    >
+                                                                                        {isExpanded ? 'Show less' : 'Show more'}
+                                                                                    </button>
+                                                                                {/if}
                                                                             </div>
                                                                         </div>
                                                                     {/if}
@@ -702,7 +732,7 @@
                                                             <h5 class="font-semibold mb-2">Details</h5>
                                                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                                 {#each Object.entries(task.eval_details) as [key, value]}
-                                                                    {#if key !== 'evaluations' && key !== 'metrics'}
+                                                                    {#if key !== 'evaluations' && key !== 'metrics' && key !== 'overall_score'}
                                                                         <div>
                                                                             <div class="text-sm font-medium text-gray-600 mb-1">{key}</div>
                                                                             <div class="bg-white p-3 rounded border border-gray-200 whitespace-pre-wrap font-mono text-xs">

@@ -7,7 +7,7 @@ export function getTaskStatus(task: any) {
     };
 }
 
-export function truncateInput(input: any, maxLength: number = 50): string {
+export function truncateInput(input: any, maxLength: number = 45): string {
     if (!input) return '-';
     
     let text: string;
