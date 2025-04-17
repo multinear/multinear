@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='multinear',
-    version='0.1.7',
+    version='0.1.8',
     packages=find_packages(exclude=['*.frontend*', '*.templates*']),
     include_package_data=True,
     entry_points={
