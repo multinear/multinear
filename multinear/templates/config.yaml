@@ -5,3 +5,34 @@ project:
 
 tasks:
   # Add your evaluations here 
+  
+  # Example numeric evaluations:
+  # - id: accuracy_test
+  #   input: "Calculate the model accuracy on the test dataset"
+  #   numeric:
+  #     expected: 0.85
+  #     method: "direct_diff"
+  #     extraction_hint: "the accuracy value"  # Uses LLM extraction (with regex fallback)
+  #     preprocessing: "percentage_to_decimal"  # Convert 85% to 0.85
+  #
+  # - id: temperature_reading
+  #   input: "What is the current temperature?"
+  #   numeric:
+  #     expected: 25.0
+  #     method: "tolerance"
+  #     absolute_tolerance: 2.0
+  #     extraction_hint: "the temperature in celsius"  # Uses LLM extraction
+  #
+  # - id: price_calculation
+  #   input: "Calculate the total price including tax"
+  #   numeric:
+  #     expected: 127.50
+  #     method: "rmse"
+  #     path: "$.result.total_price"  # Always uses JSONPath (ignores extraction_hint if present)
+  #
+  # - id: simple_number
+  #   input: "What is 2 + 2?"
+  #   numeric:
+  #     expected: 4
+  #     method: "direct_diff"
+  #     # No extraction_hint or path - uses regex extraction
