@@ -2,6 +2,7 @@ from .checklist import ChecklistClassifier2
 from .list import ListEvaluator
 from .custom import CustomEvaluator
 from .weighted_score import WeightedScoreEvaluator
+from .numeric import NumericEvaluator
 
 
 def evaluate_metric(spec: dict, input: any, output: any, task_runner_module: any, global_context: str = "") -> dict:
@@ -39,6 +40,9 @@ def evaluate_metric(spec: dict, input: any, output: any, task_runner_module: any
     elif 'list' in spec:
         evaluator = ListEvaluator(spec['list'])
         result = evaluator(output)
+    elif 'numeric' in spec:
+        evaluator = NumericEvaluator()
+        result = evaluator(output, spec['numeric'], input=input)
     else:
         raise ValueError("No evaluator specified")
 
