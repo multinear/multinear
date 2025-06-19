@@ -1,5 +1,4 @@
 import json
-import yaml
 from autoevals.llm import OpenAILLMClassifier, DEFAULT_MODEL
 from braintrust_core.score import Score
 
@@ -57,7 +56,7 @@ Evaluate each criterion individually, providing its ID, a score (0-1), and a det
                         "properties": {
                             "id": {
                                 "type": "string",
-                                "description": "The unique identifier for the criterion being evaluated.",
+                                "description": "The exact unique identifier (ID) for the criterion being evaluated (e.g., 'pattern_0_categorical'). Return ONLY the ID, without the Eval text.",
                             },
                             "criterion": {
                                 "type": "string",

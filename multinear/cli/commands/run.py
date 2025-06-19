@@ -6,7 +6,7 @@ from rich.table import Table
 from .details import print_details
 from ..utils import get_current_project
 from ...engine.run import run_experiment
-from ...engine.storage import JobModel, TaskModel
+from ...engine.storage import JobModel, TaskModel, TaskStatus
 
 
 def add_parser(subparsers):
@@ -51,6 +51,11 @@ def handle(args):
                 current_task=update.get("current"),
                 details=update
             )
+            log_str = f"Task {update.get('current', 0)}/{update.get('total', 0)} status: {update['status']}"
+            if pbar is not None:
+                pbar.write(log_str)
+            else:
+                print(log_str)
 
             # Initialize progress bar when we get total tasks
             if pbar is None and update.get("total") is not None:
@@ -58,19 +63,9 @@ def handle(args):
 
             # Update progress bar if initialized
             if pbar is not None and update.get("current") is not None:
-                pbar.n = update["current"]
-                pbar.refresh()
-
-            # Update Rich console with status
-            status_table = Table(title="Experiment Status")
-            status_table.add_column(
-                "Status", justify="left", style="cyan", no_wrap=True
-            )
-            status_table.add_column("Details", style="magenta")
-
-            status_table.add_row(update["status"], update.get("details", ""))
-            console.clear()
-            console.print(status_table)
+                completed_tasks = sum(1 for status in update["status_map"].values() 
+                    if status in [TaskStatus.COMPLETED, TaskStatus.FAILED])
+                pbar.n = completed_tasks
 
         # Mark the job as finished upon successful completion
         job.finish()

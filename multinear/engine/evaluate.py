@@ -33,10 +33,15 @@ def evaluate_metric(spec: dict, input: any, output: any, task_runner_module: any
         evaluator = ChecklistClassifier2(context=combined_context)
         result = evaluator(output, spec['checklist'], input=input)
     elif 'weighted_score' in spec:
-        # Pass combined context
-        evaluator = WeightedScoreEvaluator(context=combined_context)
-        # Pass the list of weighted score definitions
-        result = evaluator(output, spec['weighted_score'], input=input)
+        # Check if weighted_score criteria is empty
+        if not spec['weighted_score'] or len(spec['weighted_score']) == 0:
+            # Return a perfect score for empty criteria (no evaluation needed)
+            result = {'score': 1.0, 'passed': True, 'metadata': {'evaluations': [], 'note': 'No weighted score criteria provided'}}
+        else:
+            # Pass combined context
+            evaluator = WeightedScoreEvaluator(context=combined_context)
+            # Pass the list of weighted score definitions
+            result = evaluator(output, spec['weighted_score'], input=input)
     elif 'list' in spec:
         evaluator = ListEvaluator(spec['list'])
         result = evaluator(output)

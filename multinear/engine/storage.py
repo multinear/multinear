@@ -128,6 +128,7 @@ class JobModel(Base):
     finished_at = Column(DateTime, nullable=True)
     project = relationship("ProjectModel", back_populates="jobs")
     tasks = relationship("TaskModel", back_populates="job")
+    aggregation_results = relationship("AggregationResultModel", back_populates="job")
 
     @classmethod
     def start(cls, project_id: str) -> str:
@@ -416,6 +417,52 @@ class TaskModel(Base):
                 .limit(limit)
                 .all()
             )
+
+
+class AggregationResultModel(Base):
+    __tablename__ = "aggregation_results"
+
+    id = Column(String, primary_key=True, index=True)
+    job_id = Column(String, ForeignKey("jobs.id"), nullable=False)
+    aggregation_type = Column(String, nullable=False)  # e.g., "by_ability_type", "overall", "by_dataset"
+    results = Column(JSON, nullable=False)  # The aggregated results
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    job = relationship("JobModel", back_populates="aggregation_results")
+
+    @classmethod
+    def save(cls, job_id: str, aggregation_type: str, results: dict) -> "AggregationResultModel":
+        """
+        Save aggregation results for a job.
+        """
+        aggregation_id = str(uuid.uuid4())
+        with db_context() as db:
+            aggregation = cls(
+                id=aggregation_id,
+                job_id=job_id,
+                aggregation_type=aggregation_type,
+                results=results
+            )
+            db.add(aggregation)
+            db.commit()
+            return aggregation
+
+    @classmethod
+    def find_by_job(cls, job_id: str) -> List["AggregationResultModel"]:
+        """
+        Find all aggregation results for a job.
+        """
+        with db_context() as db:
+            return db.query(cls).filter(cls.job_id == job_id).all()
+
+    def to_dict(self):
+        """
+        Convert the AggregationResultModel to a dictionary, excluding SQLAlchemy internals
+        """
+        data = {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
+        for k, v in data.items():
+            if isinstance(v, datetime):
+                data[k] = v.isoformat()  # Convert datetime objects to ISO format strings
+        return data
 
 
 # Database session management

@@ -16,5 +16,10 @@ dependencies = [
     "uvicorn[standard]>=0.23",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0.0",
+]
+
 [project.scripts]
 multinear = "multinear.cli.main:main"
