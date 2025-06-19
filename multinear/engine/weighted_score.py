@@ -1,5 +1,4 @@
 import json
-import yaml
 from autoevals.llm import OpenAILLMClassifier, DEFAULT_MODEL
 from braintrust_core.score import Score
 
