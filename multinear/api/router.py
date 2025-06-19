@@ -13,9 +13,13 @@ from ..api.schemas import (
     FullRunDetails,
     TaskDetails,
     RecentRunsResponse,
+    AggregationResultResponse,
+    AggregationSummaryResponse,
+    AggregationResultData,
+    AggregationGroupResult,
 )
 from ..engine.run import run_experiment
-from ..engine.storage import ProjectModel, JobModel, TaskModel, TaskStatus
+from ..engine.storage import ProjectModel, JobModel, TaskModel, TaskStatus, AggregationResultModel
 
 
 def background_job(
@@ -529,3 +533,121 @@ async def get_available_tasks(project_id: str):
         return {"tasks": root_tasks, "groups": groups}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _convert_aggregation_to_response(aggregation: AggregationResultModel) -> AggregationResultResponse:
+    """
+    Convert an AggregationResultModel to API response format.
+    
+    Args:
+        aggregation: The aggregation result model from database
+        
+    Returns:
+        AggregationResultResponse: API response format
+    """
+    # Convert serialized results back to proper format
+    results = aggregation.results
+    
+    # Create AggregationResultData objects from results
+    converted_results = {}
+    for key, data in results.get('results', {}).items():
+        converted_results[key] = AggregationResultData(
+            score=data['score'],
+            count=data['count'],
+            metadata=data.get('metadata', {})
+        )
+    
+    # Create the group result
+    group_result = AggregationGroupResult(
+        fields=results.get('fields', []),
+        results=converted_results
+    )
+    
+    return AggregationResultResponse(
+        id=aggregation.id,
+        job_id=aggregation.job_id,
+        aggregation_type=aggregation.aggregation_type,
+        results=group_result,
+        created_at=aggregation.created_at.replace(tzinfo=timezone.utc).isoformat()
+    )
+
+
+@api_router.get("/jobs/{job_id}/aggregations", response_model=AggregationSummaryResponse)
+async def get_job_aggregations(job_id: str):
+    """
+    Retrieve all aggregation results for a specific job.
+    
+    Args:
+        job_id (str): The ID of the job
+        
+    Returns:
+        AggregationSummaryResponse: All aggregation results for the job
+        
+    Raises:
+        HTTPException: If the job is not found
+    """
+    # Verify job exists
+    job = JobModel.find(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Get all aggregation results for this job
+    aggregation_models = AggregationResultModel.find_by_job(job_id)
+    
+    # Convert to response format
+    aggregations = [_convert_aggregation_to_response(agg) for agg in aggregation_models]
+    
+    # Get task counts from job details
+    job_details = job.details or {}
+    task_status_map = job_details.get("status_map", {})
+    total_tasks = len(task_status_map)
+    completed_tasks = sum(
+        1 for status in task_status_map.values() 
+        if status == TaskStatus.COMPLETED
+    )
+    
+    return AggregationSummaryResponse(
+        job_id=job_id,
+        aggregations=aggregations,
+        task_count=completed_tasks,
+        total_tasks=total_tasks
+    )
+
+
+@api_router.get("/jobs/{job_id}/aggregations/{aggregation_type}", response_model=AggregationResultResponse)
+async def get_job_aggregation_by_type(job_id: str, aggregation_type: str):
+    """
+    Retrieve a specific aggregation result by type for a job.
+    
+    Args:
+        job_id (str): The ID of the job
+        aggregation_type (str): The type of aggregation (e.g., 'overall', 'by_dataset')
+        
+    Returns:
+        AggregationResultResponse: The specific aggregation result
+        
+    Raises:
+        HTTPException: If the job or aggregation type is not found
+    """
+    # Verify job exists
+    job = JobModel.find(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Get specific aggregation result
+    aggregation_models = AggregationResultModel.find_by_job(job_id)
+    
+    # Find the specific aggregation type
+    target_aggregation = None
+    for agg in aggregation_models:
+        if agg.aggregation_type == aggregation_type:
+            target_aggregation = agg
+            break
+    
+    if not target_aggregation:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Aggregation type '{aggregation_type}' not found for job"
+        )
+    
+    return _convert_aggregation_to_response(target_aggregation)

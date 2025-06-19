@@ -160,3 +160,46 @@ export async function startGroupRun(projectId: string, groupId: string): Promise
     }
     return response.json();
 }
+
+// Aggregation interfaces
+export interface AggregationResultData {
+    score: number;
+    count: number;
+    metadata?: Record<string, any>;
+}
+
+export interface AggregationGroupResult {
+    fields: string[];
+    results: Record<string, AggregationResultData>;
+}
+
+export interface AggregationResultResponse {
+    id: string;
+    job_id: string;
+    aggregation_type: string;
+    results: AggregationGroupResult;
+    created_at: string;
+}
+
+export interface AggregationSummaryResponse {
+    job_id: string;
+    aggregations: AggregationResultResponse[];
+    task_count: number;
+    total_tasks: number;
+}
+
+export async function getJobAggregations(jobId: string): Promise<AggregationSummaryResponse> {
+    const response = await fetch(`${API_URL}/jobs/${jobId}/aggregations`);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch job aggregations: ${response.statusText}`);
+    }
+    return response.json();
+}
+
+export async function getJobAggregationByType(jobId: string, aggregationType: string): Promise<AggregationResultResponse> {
+    const response = await fetch(`${API_URL}/jobs/${jobId}/aggregations/${aggregationType}`);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch aggregation type ${aggregationType}: ${response.statusText}`);
+    }
+    return response.json();
+}

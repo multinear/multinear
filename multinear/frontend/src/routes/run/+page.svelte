@@ -24,6 +24,7 @@
     // @ts-ignore - Split.js doesn't have TypeScript definitions by default
     import Split from 'split.js';
     import ScoreCircle from '$lib/components/ScoreCircle.svelte';
+    import AggregationMetrics from '$lib/components/AggregationMetrics.svelte';
 
     // Add state for expanded details
     let expandedDetails = new Map<string, boolean>();
@@ -277,6 +278,9 @@
         <ErrorDisplay errorMessage={error} onRetry={() => loadRunDetails(runId!)} />
     {:else if runDetails}
         <div class="space-y-6">
+            <!-- Aggregation Metrics -->
+            <AggregationMetrics runId={runDetails.id} />
+            
             <!-- Summary Card -->
             <Card.Root class="pb-4">
                 <Card.Header>

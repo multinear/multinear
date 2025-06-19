@@ -85,3 +85,41 @@ class RecentRunsResponse(BaseModel):
     """
     runs: List[RecentRun]
     total: int
+
+
+class AggregationResultData(BaseModel):
+    """
+    Schema representing individual aggregation result data.
+    """
+    score: float
+    count: int
+    metadata: Optional[Dict] = None
+
+
+class AggregationGroupResult(BaseModel):
+    """
+    Schema representing aggregation results for a specific grouping.
+    """
+    fields: List[str]
+    results: Dict[str, AggregationResultData]
+
+
+class AggregationResultResponse(BaseModel):
+    """
+    Schema representing a single aggregation result.
+    """
+    id: str
+    job_id: str
+    aggregation_type: str
+    results: AggregationGroupResult
+    created_at: str
+
+
+class AggregationSummaryResponse(BaseModel):
+    """
+    Schema representing all aggregation results for a job.
+    """
+    job_id: str
+    aggregations: List[AggregationResultResponse]
+    task_count: int
+    total_tasks: int
