@@ -7,18 +7,45 @@ from sqlalchemy import (
     ForeignKey,
     Float,
     Boolean,
+    event,
 )
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from sqlalchemy.types import JSON
+from sqlalchemy.pool import QueuePool
 from datetime import datetime, timezone
 from contextlib import contextmanager
 from typing import Dict, Optional, List
 import uuid
 from pathlib import Path
 import yaml
+import time
+import random
+from functools import wraps
+import sqlite3
 
 
 Base = declarative_base()
+
+
+def _retry_on_database_lock(max_retries=5, base_delay=0.1):
+    """
+    Decorator to retry database operations on lock errors with exponential backoff.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if "database is locked" in str(e).lower() and attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt) + random.uniform(0, 0.1)
+                        time.sleep(delay)
+                        continue
+                    raise
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 class TaskStatus:
@@ -130,6 +157,7 @@ class JobModel(Base):
         with db_context() as db:
             return db.query(cls).filter(cls.id.like(f"%{job_id}")).first()
 
+    @_retry_on_database_lock()
     def update(
         self,
         status: str = None,
@@ -279,6 +307,7 @@ class TaskModel(Base):
         return data
 
     @classmethod
+    @_retry_on_database_lock()
     def start(cls, job_id: str, task_number: int, challenge_id: str) -> str:
         """
         Start a new task and return its ID.
@@ -297,6 +326,7 @@ class TaskModel(Base):
             return task_id
 
     @classmethod
+    @_retry_on_database_lock()
     def executed(cls, task_id: str, input: any, output: any, details: dict, logs: dict):
         """
         Update the task as executed with results and logs.
@@ -312,6 +342,7 @@ class TaskModel(Base):
             db.commit()
 
     @classmethod
+    @_retry_on_database_lock()
     def evaluated(
         cls,
         task_id: str,
@@ -391,6 +422,26 @@ class TaskModel(Base):
 
 # Global variable to store SessionLocal
 _SessionLocal = None
+_engine = None
+_last_flush_time = time.time()
+FLUSH_INTERVAL = 3.0  # Flush cache every 3 seconds
+
+
+def _enable_wal_mode(dbapi_connection, connection_record):
+    """
+    Enable WAL mode and set optimizations for concurrent access.
+    """
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        cursor = dbapi_connection.cursor()
+        # Enable WAL mode for concurrent access
+        cursor.execute("PRAGMA journal_mode=WAL")
+        # Set reasonable timeout for busy database
+        cursor.execute("PRAGMA busy_timeout=30000")  # 30 seconds
+        # Optimize for concurrent access
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA cache_size=10000")
+        cursor.execute("PRAGMA temp_store=memory")
+        cursor.close()
 
 
 def init_db():
@@ -398,12 +449,37 @@ def init_db():
     Initialize the database engine and create tables if they don't exist.
     """
     DATABASE_URL = "sqlite:///./.multinear/multinear.db"
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-    global _SessionLocal
-    _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    
+    global _engine, _SessionLocal
+    
+    # Configure engine with WAL mode and connection pooling
+    _engine = create_engine(
+        DATABASE_URL,
+        connect_args={
+            "check_same_thread": False,
+            "timeout": 30,  # 30 second timeout
+        },
+        poolclass=QueuePool,
+        pool_size=20,
+        max_overflow=30,
+        pool_pre_ping=True,
+        pool_recycle=300,  # Recycle connections every 5 minutes
+        echo=False,
+        future=True,  # Use future mode for better compatibility
+    )
+    
+    # Set up WAL mode event listener
+    event.listen(_engine, "connect", _enable_wal_mode)
+    
+    _SessionLocal = sessionmaker(
+        autocommit=False, 
+        autoflush=False, 
+        bind=_engine,
+        expire_on_commit=False
+    )
 
     # Create tables defined by the models
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=_engine)
 
 
 def _create_session():
@@ -417,12 +493,26 @@ def _create_session():
 
 
 @contextmanager
+@_retry_on_database_lock()
 def db_context():
     """
     Provide a transactional scope around a series of operations.
+    Includes periodic cache flushing for parallel process compatibility.
     """
+    global _last_flush_time
+    
     db = _create_session()
     try:
+        # Check if we need to flush cache for parallel processes
+        current_time = time.time()
+        if current_time - _last_flush_time > FLUSH_INTERVAL:
+            try:
+                db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                _last_flush_time = current_time
+            except Exception:
+                # Ignore checkpoint errors, they're not critical
+                pass
+        
         yield db
     finally:
         db.close()
