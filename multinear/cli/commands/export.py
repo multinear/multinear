@@ -3,7 +3,7 @@ from pathlib import Path
 from rich.console import Console
 
 from ..utils import get_current_project
-from ...engine.storage import JobModel, TaskModel
+from ...engine.storage import JobModel, TaskModel, AggregationResultModel
 
 
 def add_parser(subparsers):
@@ -52,6 +52,16 @@ def handle(args):
     tasks = TaskModel.list(job.id)
     for task in tasks:
         export_data["tasks"][task.challenge_id] = task.to_dict()
+    
+    # Get aggregation results if available
+    aggregations = AggregationResultModel.find_by_job(job.id)
+    if aggregations:
+        export_data["aggregations"] = {}
+        for aggregation in aggregations:
+            export_data["aggregations"][aggregation.aggregation_type] = {
+                "results": aggregation.results,
+                "created_at": aggregation.created_at.isoformat()
+            }
 
     # Determine output path
     output_path = args.output if args.output else f"{job.id}.json"

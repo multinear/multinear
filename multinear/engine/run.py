@@ -8,6 +8,13 @@ from .storage import JobModel, TaskModel, TaskStatus
 from ..utils.git import get_git_revision
 from .run_select import select_tasks
 from .run_group import run_group
+from .aggregation import (
+    compute_aggregations, 
+    save_aggregations, 
+    display_aggregations,
+    should_compute_aggregations,
+    get_aggregation_config
+)
 
 
 def run_experiment(
@@ -157,6 +164,23 @@ def run_experiment(
             current_task_offset += sum(
                 task.get("repeat", global_repeat) for task in group_tasks
             )
+
+        # Compute and display aggregations if enabled
+        if should_compute_aggregations(config):
+            console.print("[yellow]Computing aggregations...[/yellow]")
+            aggregation_config = get_aggregation_config(config)
+            
+            try:
+                aggregations = compute_aggregations(job.id, config)
+                
+                if aggregations and aggregation_config.get('save_to_db', True):
+                    save_aggregations(job.id, aggregations)
+                
+                if aggregations and aggregation_config.get('display', True):
+                    display_aggregations(aggregations, console)
+                
+            except Exception as e:
+                console.print(f"[red]Warning: Failed to compute aggregations: {str(e)}[/red]")
 
         yield {
             "status": TaskStatus.COMPLETED,
