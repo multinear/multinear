@@ -4,13 +4,7 @@ Comprehensive test suite for the NumericEvaluator implementation.
 Tests all extraction methods, comparison algorithms, and edge cases.
 """
 
-import math
-import json
-import sys
-import os
-
-# Add project root to path for imports
-sys.path.insert(0, os.path.abspath('.'))
+import pytest
 
 from multinear.engine.numeric import (
     NumberExtractor, 
@@ -398,7 +392,6 @@ class TestPerformance:
     def test_memory_usage(self):
         """Test memory usage with many evaluations."""
         import gc
-        import sys
         
         initial_objects = len(gc.get_objects())
         
@@ -438,54 +431,73 @@ class TestDebugOutput:
         assert "Expected value: 0.873" in debug_info
 
 
-def run_all_tests():
-    """Run all tests and report results."""
-    print("Running comprehensive numeric evaluator tests...")
+def test_all_components_integration():
+    """Test that all components work together correctly."""
+    evaluator = NumericEvaluator(use_llm=False)
     
-    test_classes = [
-        TestNumberExtraction,
-        TestComparisonMethods,
-        TestIntegration,
-        TestRealisticModelOutputs,
-        TestPerformance,
-        TestDebugOutput
+    # Test a comprehensive evaluation scenario
+    output = {
+        "model_performance": {
+            "accuracy": 0.923,
+            "f1_score": 0.876,
+            "precision": 0.901
+        },
+        "runtime_metrics": {
+            "inference_time_ms": 245.7,
+            "memory_usage_mb": 1024
+        }
+    }
+    
+    # Test multiple extractions from the same structured output
+    test_cases = [
+        {
+            "spec": {
+                "expected": 0.923,
+                "method": "direct_diff",
+                "path": "$.model_performance.accuracy"
+            },
+            "expected_score": 1.0
+        },
+        {
+            "spec": {
+                "expected": 250,
+                "method": "tolerance",
+                "absolute_tolerance": 10,
+                "path": "$.runtime_metrics.inference_time_ms"
+            },
+            "expected_score": 1.0
+        },
+        {
+            "spec": {
+                "expected": 1000,
+                "method": "tolerance",
+                "relative_tolerance": 0.05,
+                "path": "$.runtime_metrics.memory_usage_mb"
+            },
+            "expected_score": 1.0
+        }
     ]
     
-    total_tests = 0
-    passed_tests = 0
-    failed_tests = []
-    
-    for test_class in test_classes:
-        print(f"\n=== {test_class.__name__} ===")
-        instance = test_class()
-        if hasattr(instance, 'setup_method'):
-            instance.setup_method()
-        
-        for method_name in dir(instance):
-            if method_name.startswith('test_'):
-                total_tests += 1
-                try:
-                    method = getattr(instance, method_name)
-                    method()
-                    print(f"✅ {method_name}")
-                    passed_tests += 1
-                except Exception as e:
-                    print(f"❌ {method_name}: {str(e)}")
-                    failed_tests.append(f"{test_class.__name__}.{method_name}: {str(e)}")
-    
-    print(f"\n{'='*50}")
-    print(f"Test Results: {passed_tests}/{total_tests} passed")
-    
-    if failed_tests:
-        print(f"\nFailed tests:")
-        for failure in failed_tests:
-            print(f"  - {failure}")
-        return False
-    else:
-        print("🎉 All tests passed!")
-        return True
+    for i, case in enumerate(test_cases):
+        result = evaluator(output, case["spec"])
+        assert result["score"] == case["expected_score"], f"Test case {i} failed: got {result['score']}, expected {case['expected_score']}"
+        assert "extraction_details" in result["metadata"]
+        assert result["metadata"]["extraction_details"]["extraction_method"] == "jsonpath"
+
+
+@pytest.mark.parametrize("text,expected,description", [
+    ("The result is 42.5", 42.5, "basic decimal"),
+    ("Success rate: 85.3%", 0.853, "percentage"),
+    ("Temperature: $123.45", 123.45, "currency"),
+    ("Fraction: 3/4 of total", 0.75, "fraction"),
+])
+def test_parametrized_extraction(text, expected, description):
+    """Parametrized test for various extraction formats."""
+    extractor = NumberExtractor(use_llm=False)
+    value, metadata = extractor.extract_regex(text)
+    assert value is not None, f"Failed to extract from: {description}"
+    assert abs(value - expected) < 0.001, f"Wrong value for {description}: got {value}, expected {expected}"
 
 
 if __name__ == "__main__":
-    success = run_all_tests()
-    exit(0 if success else 1)
+    pytest.main([__file__, "-v"])
