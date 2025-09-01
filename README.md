@@ -13,6 +13,18 @@ Developing reliable applications powered by Generative AI presents unique challe
 - **Insightful Analytics**: Compare results across different runs to understand the impact of changes. Visualize performance trends and make data-driven decisions to enhance your application.
 - **Guardrail Testing**: Strengthen your application against malicious inputs, security threats, and safety concerns by evaluating it under challenging scenarios.
 
+## Overview
+
+Multinear is a simple workflow for evaluating GenAI apps:
+
+- Define tasks and criteria in `.multinear/config.yaml`.
+- Run from the CLI or web UI and watch progress in real time.
+- Mix evaluators (checklist, weighted, list, or custom Python) per task.
+- Group tasks to focus on specific areas and run subsets.
+- Inspect detailed results with captured logs and rationales.
+
+See the Configuration and Evaluators sections for concrete examples.
+
 ## Project Initialization
 
 Initialize a new Multinear project in your project folder:
@@ -150,6 +162,323 @@ Once the experiment run is complete, you can analyze the results via the fronten
 - **Detailed Reports**: Drill down into individual tasks to see input, output, logs, and evaluation details.
 - **Trend Analysis**: Compare results across runs to identify improvements or regressions.
 - **Filter and Search**: Find specific tasks or runs based on criteria such as challenge ID, date, or status.
+
+## Config Reference
+
+Multinear reads `.multinear/config.yaml`. You can define a flat `tasks:` list or organize tasks into `groups:`. Below is the supported structure with examples.
+
+### Top‑level keys:
+
+```yaml
+project:            # Required project metadata
+  id: my-project
+  name: My Project
+  description: Demo
+
+meta:               # Optional: defaults and execution controls
+  repeat: 1         # Default repeats per task (int)
+  rephrase: false   # Rephrase inputs for repeats via OpenAI
+  max_workers: 1    # Parallel workers for concurrent execution
+  context: |        # Shared context injected into evaluators
+    Shared evaluation context here
+  fail_simulate: 0  # Optional float (0..1) to simulate failures for testing
+  # Optional evaluator defaults for single‑metric tasks
+  # checklist: [...]
+  # custom: { ... }
+
+# Choose one style: grouped or flat
+groups:
+  - id: retrieval
+    name: Retrieval checks
+    description: Validate RAG answers and structure
+    tasks: [ ... ]  # See Task object below
+
+# Flat mode (alternative to groups)
+tasks:
+  - { ... }
+```
+
+### Task object examples:
+
+#### Single‑metric task (choose one evaluator block):
+
+```yaml
+tasks:
+  - id: task-1                              # Optional; auto‑derived sha256(input) if omitted
+    input: "Summarize the process in simple terms."  # String or object. If object has `question`, only that key is rephrased
+    min_score: 0.7                           # Optional: pass threshold (default 1.0)
+    repeat: 1                                # Optional: override meta.repeat
+    rephrase: false                          # Optional: override meta.rephrase
+    context: "Audience: non‑experts"         # Optional: appended after meta.context (single‑metric only)
+
+    # Checklist evaluator (active example)
+    checklist:
+      - text: Response is in English
+      - text: Tone is polite
+      - text: Uses 2–3 concise bullet points
+        min_score: 0.5                      # Optional per‑item min; >= min counts as full pass
+
+    # weighted_score:                       # Alternative (commented)
+    #   - { id: accuracy,  eval: "Technically accurate",  weight: 0.5 }
+    #   - { id: clarity,   eval: "Clear to layperson",    weight: 0.3 }
+    #   - { id: brevity,   eval: "<= 200 words",          weight: 0.2 }
+    # min_score: 0.7                         # Optional
+    # context: "Evaluation context"          # Optional
+
+    # list:                                  # Alternative (commented)
+    #   path: "$.payload.required_keys"      # Optional: JSONPath into output
+    #   includes: ["id", "email"]
+    #   excludes: ["password"]
+    #   max_length: 10
+    # min_score: 1.0                          # Optional
+
+    # numeric:                               # Alternative (commented)
+    #   expected: 0.85
+    #   method: tolerance                     # One of: direct_diff | mse | rmse | tolerance | range
+    #   absolute_tolerance: 0.05              # Or use relative_tolerance
+    #   # Optional helpers:
+    #   # path: "$.score"
+    #   # extraction_hint: "the AUC"
+    #   # preprocessing: strip_spaces
+    # min_score: 1.0                          # Optional
+
+    # custom:                                # Alternative (commented)
+    #   min_score: 0.7                        # Optional
+    #   checks:
+    #     - name: Has greeting
+    #       criterion: "Contains 'Hello'"
+    #       type: contains
+    #       value: "Hello"
+    #     - name: Max length 200
+    #       criterion: "<= 200 characters"
+    #       type: max_length
+    #       value: 200
+    # # Note: custom is additive; pair it with another evaluator for best results.
+```
+
+#### Multi‑metric task (average score; all metrics must pass):
+
+```yaml
+tasks:
+  - id: task-2
+    input: "Answer and cite at least two sources."
+    # Optional: shared context across metrics (use meta.context for multi‑metric)
+    # meta:
+    #   context: "Enterprise tone"
+    metrics:
+      - type: checklist
+        checklist:
+          - text: Cites at least 2 sources
+          - text: Avoids marketing buzzwords
+        min_score: 0.6                      # Optional per‑metric threshold
+        context: "Formal tone"               # Optional per‑metric context
+      - type: weighted_score
+        weighted_score:
+          - { id: structure, eval: "Structured sections", weight: 0.4 }
+          - { id: facts,     eval: "Factual accuracy",  weight: 0.6 }
+        min_score: 0.7
+```
+
+Challenge IDs:
+- If `id` is omitted, Multinear derives it as `sha256(input)`.
+- When `repeat > 1`, subsequent repeats append `_<n>` (e.g., `_1`, `_2`).
+
+#### Groups example:
+
+```yaml
+groups:
+  - id: rag
+    name: RAG
+    description: Retrieval‑augmented generation checks
+    tasks:
+      - id: rag-basic
+        input: { question: "What is vector search?" }
+        checklist:
+          - text: Mentions dense embeddings
+          - text: Explains approximate nearest neighbors (ANN)
+        min_score: 0.6
+```
+
+### Evaluator blocks
+
+#### Checklist (LLM‑as‑judge with per‑item scoring):
+
+Uses an LLM to score each checklist item (0–1) with a rationale, then averages across items. You can set per‑item `min_score` to grant full credit when met and pass optional `context` (appended after `meta.context`).
+
+```yaml
+tasks:
+  - id: checklist-demo
+    input: "Summarize the process."
+    context: "Audience: non‑experts"  # Optional: appended after meta.context
+    checklist:
+      - text: Response is in English
+      - text: Tone is polite
+      - text: Under 200 words; min_score: 0.5  # Optional per‑item min; >= min counts as full pass
+    min_score: 0.7  # Optional pass threshold (default 1.0)
+```
+
+#### Weighted Score (multi‑criterion with weights):
+
+Scores multiple criteria and combines them using your weights to produce a final 0–1 score. Returns per‑criterion rationales; weights don’t need to sum to 1 (the evaluator normalizes by total weight).
+
+```yaml
+tasks:
+  - id: weighted-demo
+    input: "Explain vector search to a PM."
+    weighted_score:
+      - { id: accuracy,  eval: "Technically accurate",  weight: 0.5 }
+      - { id: clarity,   eval: "Clear to layperson",    weight: 0.3 }
+      - { id: brevity,   eval: "Brevity (<= 200 words)", weight: 0.2 }
+    min_score: 0.7        # Optional
+    # context: "Evaluation context"  # Optional
+```
+
+#### List (structural checks over arrays):
+
+Validates list structure/content in the output. Target the list via optional JSONPath `path`, then require items (`includes`), forbid items (`excludes`), and enforce `max_length`; non‑list values fail.
+
+```yaml
+tasks:
+  - id: list-demo
+    input: { payload: { required_keys: ["id", "email", "role"] } }
+    list:
+      path: "$.payload.required_keys"   # Optional JSONPath into the output
+      includes: ["id", "email"]
+      excludes: ["password"]
+      max_length: 10
+    min_score: 1.0  # Optional
+```
+
+#### Custom (user‑defined Python in `.multinear/task_runner.py`):
+
+A Python hook to implement domain‑specific checks. Return a dict with `score` and `metadata.evaluations`; use alongside another evaluator when you want both LLM judgment and deterministic rules.
+
+```yaml
+tasks:
+  - id: custom-demo
+    input: "Hello, this is a short response about vectors."
+    # Note: custom is additive; pair it with another evaluator when needed
+    checklist:
+      - text: Mentions 'vector' (case-insensitive); min_score: 0.5
+    custom:
+      min_score: 0.7  # Optional
+      checks:
+        - name: Has greeting
+          criterion: "Contains 'Hello'"
+          type: contains
+          value: "Hello"
+        - name: Max length 200
+          criterion: "<= 200 characters"
+          type: max_length
+          value: 200
+```
+
+Minimal `.multinear/task_runner.py` shape:
+
+```python
+# .multinear/task_runner.py
+from typing import Any, Dict, List
+
+
+def _score_bool(ok: bool) -> float:
+    return 1.0 if ok else 0.0
+
+
+def evaluate_custom(input: Any, output: Any, spec: Dict) -> Dict:
+    """
+    Example custom evaluator matching the YAML `custom:` block above.
+    Supports check types: contains, icontains, max_length, min_length.
+    """
+    checks: List[Dict] = spec.get("checks", [])
+
+    # Normalize output to string for simple checks
+    out_text = output if isinstance(output, str) else str(output)
+
+    evaluations: List[Dict] = []
+    total = 0.0
+
+    for chk in checks:
+        ctype = chk.get("type")
+        crit = chk.get("criterion") or chk.get("name") or "Unnamed check"
+        val = chk.get("value")
+
+        ok = False
+        rationale = ""
+
+        try:
+            if ctype == "contains":
+                ok = (val or "") in out_text
+                rationale = f"{'Found' if ok else 'Missing'} substring: {val!r}"
+            elif ctype == "icontains":
+                ok = (val or "").lower() in out_text.lower()
+                rationale = f"{'Found' if ok else 'Missing'} substring (case-insensitive): {val!r}"
+            elif ctype == "max_length":
+                limit = int(val)
+                ok = len(out_text) <= limit
+                rationale = f"Length {len(out_text)} / {limit}"
+            elif ctype == "min_length":
+                limit = int(val)
+                ok = len(out_text) >= limit
+                rationale = f"Length {len(out_text)} >= {limit}"
+            else:
+                rationale = f"Unknown check type: {ctype}"
+        except Exception as e:
+            ok = False
+            rationale = f"Check error: {e}"
+
+        s = _score_bool(ok)
+        total += s
+        evaluations.append({
+            "criterion": crit,
+            "score": s,
+            "rationale": rationale,
+        })
+
+    # Average score across checks; empty list -> 0.0
+    overall = (total / len(evaluations)) if evaluations else 0.0
+
+    result = {
+        "score": overall,
+        "metadata": {
+            "evaluations": evaluations,
+            "overall_score": overall,
+        },
+    }
+
+    # Optional pass honoring custom min_score if provided in spec
+    if isinstance(spec.get("min_score"), (int, float)):
+        result["passed"] = overall >= float(spec["min_score"])
+
+    return result
+```
+
+Notes:
+- Merging: Multinear merges custom results assuming a dict return type with `metadata.evaluations`. Returning a `Score` object will not merge rationales correctly.
+- Combination: When combined with another evaluator, Multinear averages the custom `score` with the primary evaluator’s score and concatenates both `metadata.evaluations` lists.
+- Additive: Use custom alongside another evaluator (e.g., checklist + custom) rather than as a standalone replacement.
+
+#### Numeric (extract and compare numbers):
+
+Extracts a numeric value from output (regex, JSONPath, or with an LLM hint) and compares it to an expected value. Supports `direct_diff`, `mse`, `rmse`, `tolerance`, and `range` methods for flexible numeric validation.
+
+```yaml
+tasks:
+  - id: numeric-demo
+    input: "The AUC achieved was 0.87 on the validation set."
+    numeric:
+      expected: 0.85
+      method: tolerance               # direct_diff | mse | rmse | tolerance | range
+      absolute_tolerance: 0.05        # Or use relative_tolerance
+      # Optional helpers:
+      # path: "$.score"
+      # extraction_hint: "the AUC"
+      # preprocessing: strip_spaces
+    min_score: 1.0  # Optional
+```
+
+Pass/fail semantics:
+- Single‑metric: pass if `score >= min_score` (default `min_score: 1.0`).
+- Multi‑metric: overall score is average; pass only if all metrics pass.
 
 ## Architecture
 
