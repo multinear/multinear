@@ -514,9 +514,80 @@ tasks:
       - text: Explains ANN indexing
 ```
 
-Pass/fail semantics:
-- Single‑metric: pass if `score >= min_score` (default `min_score: 1.0`).
-- Multi‑metric: overall score is average; pass only if all metrics pass.
+### Pass/fail semantics
+- Single‑metric tasks: Pass when `score >= min_score` (default `min_score: 1.0`). If using `checklist`, per‑item `min_score` can bump that item to full credit; the task’s `min_score` still applies to the averaged score.
+- Multi‑metric tasks: Each metric has its own `min_score` and must pass independently (AND logic). The task’s overall score is the average of metric scores. Note: a task‑level `min_score` is ignored when `metrics:` is used — set `min_score` per metric.
+- Custom + primary evaluator: When `custom:` is present in a metric, Multinear averages the custom score with the primary metric’s score and concatenates their rationales; pass/fail is determined against that metric’s `min_score`.
+- Weighted Score edge case: An empty `weighted_score: []` is treated as a no‑op and returns `score=1.0, passed=true`.
+
+## Setup and Environment
+
+- OpenAI credentials: Set `OPENAI_API_KEY` in your shell environment to enable LLM‑based evaluators (Checklist, Weighted Score, and Numeric when using LLM extraction) and input rephrasing. Example (bash/zsh): `export OPENAI_API_KEY=sk-...`.
+- Models: Evaluators default to a sensible OpenAI chat model. If your stack supports customizing models (via autoevals or your environment), set the appropriate env var per your setup.
+- Database: Results are stored in a local SQLite DB at `.multinear/multinear.db` (created automatically). The engine enables WAL mode for better concurrency.
+- Git revision: If the project directory is a Git repo, Multinear records the current revision for each run and shows it in recent runs and run details.
+- Alternate config: Use `MULTINEAR_CONFIG` or CLI `--config <name>` to point to `.multinear/<name>.yaml`.
+
+## CLI Reference
+
+Use these commands when scripting or when you need more control than the quick “Using the CLI” section provides.
+
+- `multinear run [--group <group_id>] [--config <name>]`
+  - Runs tasks from `.multinear/config.yaml` (or `.multinear/<name>.yaml`).
+  - `--group <group_id>`: run only that group’s tasks (group ID from config).
+  - `--config <name>`: pick alternate config file in `.multinear/` (omit `.yaml`).
+  - Output: writes summary + full details to `.multinear/last_output.txt` and prints a run summary with a hint to use `details`.
+
+- `multinear recent [--config <name>]`
+  - Shows the most recent runs for the current project (uses configured DB).
+  - Use `--config` to target a different named config in `.multinear/`.
+
+- `multinear details <run-id|short-id> [--config <name>]`
+  - Prints detailed information for a specific run.
+  - Short IDs: you can pass the last 8 characters of the run ID.
+
+- `multinear export <run-id|short-id> [-o out.json] [--config <name>]`
+  - Exports full run data to a JSON file.
+  - Default output path: `run-<id>.json` in the current directory (or specify with `-o`).
+  - Includes job metadata, tasks keyed by `challenge_id`, and (if configured) aggregations.
+
+- `multinear web [--host 127.0.0.1] [--port 8000] [--debug] [--config <name>]`
+  - Starts the production web server.
+  - `--config <name>`: sets `MULTINEAR_CONFIG` to use `.multinear/<name>.yaml`.
+
+- `multinear web_dev [--host] [--port] [--debug] [--config <name>]`
+  - Starts the development server with auto‑reload (watches `.py` and `.yaml`).
+  - Useful while editing your task runner or config.
+
+Tips
+- Config selection: `--config <name>` is equivalent to exporting `MULTINEAR_CONFIG=$(pwd)/.multinear/<name>.yaml` before invoking commands.
+- Group vs single task: Use `--group` to target a subset; for a single task run, call the API endpoints or define a temporary config with only that task.
+- Short IDs: `details` and `export` accept run IDs or the last 8 characters.
+
+## Tips and Gotchas
+
+### Context propagation
+- Single‑metric tasks: The engine injects `meta.context` into the task as `context` before evaluation. If you also set `task.context`, the injected value overwrites it. Recommendation: for single‑metric tasks, put shared evaluator context in `meta.context` only.
+- Multi‑metric tasks: Place `context` inside each metric item for per‑metric guidance. To share a value across all metrics in a task, add `meta.context` under the task:
+  
+  ```yaml
+  tasks:
+    - id: t1
+      meta:
+        context: "Shared across metrics"
+      metrics:
+        - type: checklist
+          context: "Tone: formal"
+          checklist: [ ... ]
+        - type: weighted_score
+          weighted_score: [ ... ]
+  ```
+  The engine concatenates shared context first, then per‑metric context.
+- Evaluator support: `context` is used by LLM‑based evaluators (checklist, weighted_score). Structural evaluators (`list`, `numeric`) ignore `context`.
+- Repeats: Rephrasing changes only the input; `context` remains unchanged across repeats.
+
+### Regression label in recent runs
+- The “regression” slice in the recent runs chart reflects tasks that are neither passed nor failed in that run (e.g., errored or pending), not historical regressions versus prior runs. Use run comparisons in the UI to assess cross‑run regressions.
 
 ## Architecture
 
