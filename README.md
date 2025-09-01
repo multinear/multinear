@@ -71,6 +71,11 @@ def run_task(input):
     return {'output': output, 'details': details}
 ```
 
+Task runner hooks and details:
+- Optional `start_run()`: Define this in `.multinear/task_runner.py` to run once before any tasks. Use it to warm up model clients, load caches, or set globals. Multinear calls it automatically if present.
+- Required `run_task(input) -> {output, details}`: Return your app’s `output` and a `details` dict. Include `details.model` (or similar) to improve run summaries; Multinear aggregates model info across tasks.
+- Logs capture: All `print`/`logging` from `start_run()` and `run_task()` are captured and shown in the UI’s task details for easy debugging.
+
 ### Configuring Tasks and Evaluations
 
 Define your tasks and evaluation criteria in `.multinear/config.yaml`.
@@ -161,7 +166,7 @@ Once the experiment run is complete, you can analyze the results via the fronten
 - **Run Summaries**: Overview of each experiment run, including total tasks, passed/failed counts, and overall score.
 - **Detailed Reports**: Drill down into individual tasks to see input, output, logs, and evaluation details.
 - **Trend Analysis**: Compare results across runs to identify improvements or regressions.
-- **Filter and Search**: Find specific tasks or runs based on criteria such as challenge ID, date, or status.
+- **Filter and Search**: Find specific tasks or runs based on criteria such as task ID, date, or status.
 
 ## Config Reference
 
@@ -177,7 +182,7 @@ project:            # Required project metadata
 
 meta:               # Optional: defaults and execution controls
   repeat: 1         # Default repeats per task (int)
-  rephrase: false   # Rephrase inputs for repeats via OpenAI
+  rephrase: false   # Rephrase inputs for repeats > 1 via OpenAI
   max_workers: 1    # Parallel workers for concurrent execution
   context: |        # Shared context injected into evaluators
     Shared evaluation context here
@@ -197,6 +202,8 @@ groups:
 tasks:
   - { ... }
 ```
+
+Note: `rephrase` only affects repeats after the first; the first execution always uses the original input.
 
 ### Task object examples:
 
@@ -222,7 +229,6 @@ tasks:
     #   - { id: accuracy,  eval: "Technically accurate",  weight: 0.5 }
     #   - { id: clarity,   eval: "Clear to layperson",    weight: 0.3 }
     #   - { id: brevity,   eval: "<= 200 words",          weight: 0.2 }
-    # min_score: 0.7                         # Optional
     # context: "Evaluation context"          # Optional
 
     # list:                                  # Alternative (commented)
@@ -230,7 +236,6 @@ tasks:
     #   includes: ["id", "email"]
     #   excludes: ["password"]
     #   max_length: 10
-    # min_score: 1.0                          # Optional
 
     # numeric:                               # Alternative (commented)
     #   expected: 0.85
@@ -240,10 +245,8 @@ tasks:
     #   # path: "$.score"
     #   # extraction_hint: "the AUC"
     #   # preprocessing: strip_spaces
-    # min_score: 1.0                          # Optional
 
     # custom:                                # Alternative (commented)
-    #   min_score: 0.7                        # Optional
     #   checks:
     #     - name: Has greeting
     #       criterion: "Contains 'Hello'"
@@ -279,7 +282,7 @@ tasks:
         min_score: 0.7
 ```
 
-Challenge IDs:
+Task IDs:
 - If `id` is omitted, Multinear derives it as `sha256(input)`.
 - When `repeat > 1`, subsequent repeats append `_<n>` (e.g., `_1`, `_2`).
 
@@ -296,7 +299,6 @@ groups:
         checklist:
           - text: Mentions dense embeddings
           - text: Explains approximate nearest neighbors (ANN)
-        min_score: 0.6
 ```
 
 ### Evaluator blocks
@@ -329,8 +331,8 @@ tasks:
       - { id: accuracy,  eval: "Technically accurate",  weight: 0.5 }
       - { id: clarity,   eval: "Clear to layperson",    weight: 0.3 }
       - { id: brevity,   eval: "Brevity (<= 200 words)", weight: 0.2 }
-    min_score: 0.7        # Optional
-    # context: "Evaluation context"  # Optional
+    # Optional fields:
+    # context: "Evaluation context"
 ```
 
 #### List (structural checks over arrays):
@@ -346,7 +348,6 @@ tasks:
       includes: ["id", "email"]
       excludes: ["password"]
       max_length: 10
-    min_score: 1.0  # Optional
 ```
 
 #### Custom (user‑defined Python in `.multinear/task_runner.py`):
@@ -361,7 +362,6 @@ tasks:
     checklist:
       - text: Mentions 'vector' (case-insensitive); min_score: 0.5
     custom:
-      min_score: 0.7  # Optional
       checks:
         - name: Has greeting
           criterion: "Contains 'Hello'"
@@ -473,7 +473,45 @@ tasks:
       # path: "$.score"
       # extraction_hint: "the AUC"
       # preprocessing: strip_spaces
-    min_score: 1.0  # Optional
+```
+
+### Repeats and Rephrasing
+
+- Repeats: Control how many times a task runs with `meta.repeat` (default 1) or per‑task `repeat`. Each repeat produces its own record; when task IDs are omitted Multinear derives ID as `sha256(input)` and appends `_<n>` for repeats after the first (e.g., `_1`, `_2`). Repeats respect configured concurrency via `meta.max_workers`.
+- Rephrasing: Set `meta.rephrase: true` or per‑task `rephrase: true` to automatically generate paraphrases for repeats after the first. Multinear calls an LLM to rephrase inputs (requires `OPENAI_API_KEY`) and tracks prior variations to avoid duplicates. If the task input is an object with a `question` key, only `question` is rephrased; otherwise the entire input string is rephrased.
+
+Examples:
+
+A) Global default repeat + rephrase
+
+```yaml
+meta:
+  repeat: 3           # Run all tasks 3 times unless overridden
+  rephrase: true      # Paraphrase repeats > 1 via LLM
+
+tasks:
+  - id: paraphrase-global
+    input: { question: "How does vector search work?" }
+    checklist:
+      - text: Mentions dense embeddings
+      - text: Explains ANN indexing
+```
+
+B) Per-task override
+
+```yaml
+meta:
+  repeat: 1           # Default: run once
+  rephrase: false     # Default: no rephrasing
+
+tasks:
+  - id: paraphrase-override
+    input: { question: "How does vector search work?" }
+    repeat: 2         # Override to run this task twice
+    rephrase: true    # Rephrase this task’s repeats only
+    checklist:
+      - text: Mentions dense embeddings
+      - text: Explains ANN indexing
 ```
 
 Pass/fail semantics:

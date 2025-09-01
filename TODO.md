@@ -8,10 +8,7 @@ This checklist captures concrete updates to improve README.md based on the lates
 - Add a Setup section for environment variables and API keys (OpenAI).
 - Add a Tips and Gotchas section (challenge IDs, repeats, context propagation, etc.).
 
-## Task Runner Hooks and Details
-
-- Document `run_task(input) -> {output, details}` (already present) and optional `start_run()` hook to warm up clients, load caches, etc. See `multinear/engine/run.py:52`.
-- Encourage providing `details.model` or similar for nicer summaries (see model summary aggregation in `multinear/engine/storage.py:147`).
+ 
 
 ## Running: CLI
 
@@ -20,11 +17,6 @@ This checklist captures concrete updates to improve README.md based on the lates
   - `multinear web --config <name>` and `multinear run --config <name>` to use an alternate config file living at `.multinear/<name>.yaml` (sets or uses `MULTINEAR_CONFIG`).
   - `multinear recent`, `multinear details <run-id-suffix>`, `multinear export <run-id> [-o out.json]`.
   - Short IDs: most CLI commands accept the last 8 chars of a run ID (details/export). Make this explicit in examples.
-
-## Repeats and Rephrasing
-
-- Explain how repeats are controlled by `meta.repeat` and `task.repeat` overrides.
-- Describe rephrasing behavior (`meta.rephrase: true` or per-task `rephrase: true`) and that it uses OpenAI chat to generate unique paraphrases (requires `OPENAI_API_KEY`). See `multinear/engine/utils.py:1` and integration at `multinear/engine/run_group.py:22`.
 
 ## Setup and Environment
 
