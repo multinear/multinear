@@ -77,8 +77,8 @@ multinear web_dev
 ## Further Reading
 
 - [Introduction](/README.md)
-- [Full Quickstart Guide](docs/quickstart.md) – Get set up quickly.
-- [Evaluations Reference](docs/evaluations.md) – Deep dive into defining great tests.
-- [Running Experiments](docs/experiments.md) – Advanced experiment workflows.
-- [Analyzing Results](docs/results.md) – Understand outcomes clearly.
-- [Architecture & Contributing](docs/architecture.md) – Learn or contribute to Multinear.
+- [Full Quickstart Guide](/docs/quickstart.md) – Get set up quickly.
+- [Evaluations Reference](/docs/evaluations.md) – Deep dive into defining great tests.
+- [Running Experiments](/docs/experiments.md) – Advanced experiment workflows.
+- [Analyzing Results](/docs/results.md) – Understand outcomes clearly.
+- [Architecture & Contributing](/docs/architecture.md) – Learn or contribute to Multinear.

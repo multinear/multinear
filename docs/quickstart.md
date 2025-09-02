@@ -89,7 +89,7 @@ multinear web
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.
 
-![Experiment Overview](static/experiment.png)
+![Experiment Overview](/static/experiment.png)
 
 **Regression Detection:**
 
@@ -121,8 +121,8 @@ Multinear captures detailed logs and rationales, clearly showing why tests fail�
 ## Further Reading
 
 - [Introduction](/README.md)
-- [Evaluations Reference](docs/evaluations.md) – Deep dive into defining great tests.
-- [Running Experiments](docs/experiments.md) – Advanced experiment workflows.
-- [Analyzing Results](docs/results.md) – Understand outcomes clearly.
-- [CLI Reference](docs/cli.md) – Automate your workflow.
-- [Architecture & Contributing](docs/architecture.md) – Go deeper or contribute.
+- [Evaluations Reference](/docs/evaluations.md) – Deep dive into defining great tests.
+- [Running Experiments](/docs/experiments.md) – Advanced experiment workflows.
+- [Analyzing Results](/docs/results.md) – Understand outcomes clearly.
+- [CLI Reference](/docs/cli.md) – Automate your workflow.
+- [Architecture & Contributing](/docs/architecture.md) – Go deeper or contribute.

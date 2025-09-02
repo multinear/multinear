@@ -4,11 +4,11 @@
 
 Multinear helps you measure AI solutions against real-world business outcomes, not abstract metrics. To achieve maximum impact, evaluations should be:
 
-- **Binary and Actionable**:  
+- **Binary and Actionable**  
   Clearly define tests that yield pass/fail outcomes — no ambiguity.
-- **Business-Focused**:  
+- **Business-Focused**  
   Directly align evaluation criteria with actual business scenarios and user expectations.
-- **Transparent**:  
+- **Transparent**  
   When tests fail, they should provide explicit insights into why, guiding clear next steps.
 
 ### Good vs. Bad Criteria Examples
@@ -409,8 +409,8 @@ tasks:
 ## Further Reading
 
 - [Introduction](/README.md)
-- [Full Quickstart Guide](docs/quickstart.md) – Get set up quickly.
-- [Running Experiments](docs/experiments.md) – Run, benchmark, and iterate.
-- [Analyzing Results](docs/results.md) – Understand outcomes clearly.
-- [CLI Reference](docs/cli.md) – Automate your workflow.
-- [Architecture & Contributing](docs/architecture.md) – Go deeper or contribute.
+- [Full Quickstart Guide](/docs/quickstart.md) – Get set up quickly.
+- [Running Experiments](/docs/experiments.md) – Run, benchmark, and iterate.
+- [Analyzing Results](/docs/results.md) – Understand outcomes clearly.
+- [CLI Reference](/docs/cli.md) – Automate your workflow.
+- [Architecture & Contributing](/docs/architecture.md) – Go deeper or contribute.

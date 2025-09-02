@@ -44,8 +44,8 @@ Please ensure that your code adheres to the project's coding standards and passe
 ## Further Reading
 
 - [Introduction](/README.md)
-- [Full Quickstart Guide](docs/quickstart.md) – Get set up quickly.
-- [Defining Evaluations](docs/evaluations.md) – Learn how to design great tests.
-- [Running Experiments](docs/experiments.md) – Run, benchmark, and iterate.
-- [Analyzing Results](docs/results.md) – Understand outcomes clearly.
-- [CLI Reference](docs/cli.md) – Automate your workflow.
+- [Full Quickstart Guide](/docs/quickstart.md) – Get set up quickly.
+- [Defining Evaluations](/docs/evaluations.md) – Learn how to design great tests.
+- [Running Experiments](/docs/experiments.md) – Run, benchmark, and iterate.
+- [Analyzing Results](/docs/results.md) – Understand outcomes clearly.
+- [CLI Reference](/docs/cli.md) – Automate your workflow.

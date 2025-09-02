@@ -10,11 +10,16 @@ Multinear solves this by providing structured experimentation, clear benchmarkin
 
 ## Why Multinear?
 
-- **Predictable outcomes**: Replace ambiguous metrics with clear, pass/fail criteria tied directly to your product’s real-world impact.
-- **Immediate regression detection**: Instantly spot regressions caused by changes to prompts, models, data, or business logic — no more guesswork.
-- **Rapid experimentation**: Quickly test and measure each change’s exact effect on reliability, accelerating your development cycle.
-- **Clear visibility into failures**: Know exactly why tests fail — prompt, model behavior, or data—allowing targeted, efficient fixes.
-- **Continuous improvement**: Maintain and evolve your baseline, confidently shipping measurable incremental improvements.
+- **Predictable outcomes**  
+  Replace ambiguous metrics with clear, pass/fail criteria tied directly to your product’s real-world impact.
+- **Immediate regression detection**  
+  Instantly spot regressions caused by changes to prompts, models, data, or business logic — no more guesswork.
+- **Rapid experimentation**  
+  Quickly test and measure each change’s exact effect on reliability, accelerating your development cycle.
+- **Clear visibility into failures**  
+  Know exactly why tests fail — prompt, model behavior, or data — allowing targeted, efficient fixes.
+- **Continuous improvement**  
+  Maintain and evolve your baseline, confidently shipping measurable incremental improvements.
 
 | Before Multinear | After Multinear |
 | --- | --- |
@@ -26,11 +31,14 @@ Multinear solves this by providing structured experimentation, clear benchmarkin
 
 Multinear makes building reliable AI applications simple and systematic:
 
-1. **Define clear evaluations**: Specify precise, binary (pass/fail) tests aligned to real-world business goals.
-2. **Run structured experiments**: Systematically test changes in prompts, models, data, or logic with instant regression detection.
-3. **Iterate confidently**: Benchmark every iteration, immediately see improvements or regressions, and rapidly iterate to reliable solutions.
+1. **Define clear evaluations**  
+  Specify precise, binary (pass/fail) tests aligned to real-world business goals.
+2. **Run structured experiments**  
+  Systematically test changes in prompts, models, data, or logic with instant regression detection.
+3. **Iterate confidently**  
+  Benchmark every iteration, immediately see improvements or regressions, and rapidly iterate to reliable solutions.
 
-With Multinear, you'll spend less time guessing and debugging—and more time confidently shipping AI-driven solutions.
+With Multinear, you'll spend less time guessing and debugging — and more time confidently shipping AI-driven solutions.
 
 ## Quick Start Guide
 
@@ -89,12 +97,12 @@ Multinear provides detailed insights and instant visibility into your test outco
 
 ## Further Reading
 
-- [Full Quickstart Guide](docs/quickstart.md) – Get set up quickly.
-- [Defining Evaluations](docs/evaluations.md) – Learn how to design great tests.
-- [Running Experiments](docs/experiments.md) – Run, benchmark, and iterate.
-- [Analyzing Results](docs/results.md) – Understand outcomes clearly.
-- [CLI Reference](docs/cli.md) – Automate your workflow.
-- [Architecture & Contributing](docs/architecture.md) – Go deeper or contribute.
+- [Full Quickstart Guide](/docs/quickstart.md) – Get set up quickly.
+- [Defining Evaluations](/docs/evaluations.md) – Learn how to design great tests.
+- [Running Experiments](/docs/experiments.md) – Run, benchmark, and iterate.
+- [Analyzing Results](/docs/results.md) – Understand outcomes clearly.
+- [CLI Reference](/docs/cli.md) – Automate your workflow.
+- [Architecture & Contributing](/docs/architecture.md) – Go deeper or contribute.
 
 ---
 
