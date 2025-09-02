@@ -120,8 +120,11 @@ Multinear captures detailed logs and rationales, clearly showing why tests fail�
 
 ## Further Reading
 
+Next: [Evaluations Reference](/docs/evaluations.md) – Deep dive into defining great tests.
+
+Contents
+
 - [Introduction](/README.md)
-- [Evaluations Reference](/docs/evaluations.md) – Deep dive into defining great tests.
 - [Running Experiments](/docs/experiments.md) – Advanced experiment workflows.
 - [Analyzing Results](/docs/results.md) – Understand outcomes clearly.
 - [CLI Reference](/docs/cli.md) – Automate your workflow.

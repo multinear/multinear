@@ -1,6 +1,6 @@
-# Multinear: Evaluation Platform for Reliable, Predictable AI Apps
+# Multinear: Building Predictable AI Apps
 
-**Multinear** enables teams to ship reliable Genenerative AI applications that actually work. Our evaluation platform gives engineers and product managers the benchmarks, regression detection, and actionable insights they need to iterate fast while maintaining quality — turning AI's inherent unpredictability into controlled, measurable progress.
+**Multinear** enables teams to ship reliable Generative AI applications that actually work. Our evaluation platform gives engineers and product managers the benchmarks, regression detection, and actionable insights they need to iterate fast while maintaining quality — turning AI's inherent unpredictability into controlled, measurable progress.
 
 ![Project Overview](static/project.png)
 

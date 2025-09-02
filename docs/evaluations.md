@@ -1,6 +1,6 @@
 # Multinear: Evaluations Reference
 
-## Structuring Evaluations for Real-World Impact (NEW)
+## Structuring Evaluations for Real-World Impact
 
 Multinear helps you measure AI solutions against real-world business outcomes, not abstract metrics. To achieve maximum impact, evaluations should be:
 
@@ -25,7 +25,9 @@ Multinear helps you measure AI solutions against real-world business outcomes, n
 
 ## Configuration
 
-Multinear reads `.multinear/config.yaml`. You can define a flat `tasks:` list or organize tasks into `groups:`. Below is the supported structure with examples.
+Multinear reads `.multinear/config.yaml`. You can define a flat `tasks:` list or organize tasks into `groups:`. 
+
+Below is the supported structure with examples.
 
 ```yaml
 project:            # Required project metadata
@@ -408,9 +410,12 @@ tasks:
 
 ## Further Reading
 
+Next: [Running Experiments](/docs/experiments.md) – Run, benchmark, and iterate.
+
+Contents
+
 - [Introduction](/README.md)
 - [Full Quickstart Guide](/docs/quickstart.md) – Get set up quickly.
-- [Running Experiments](/docs/experiments.md) – Run, benchmark, and iterate.
 - [Analyzing Results](/docs/results.md) – Understand outcomes clearly.
 - [CLI Reference](/docs/cli.md) – Automate your workflow.
 - [Architecture & Contributing](/docs/architecture.md) – Go deeper or contribute.
